@@ -112,44 +112,44 @@ void Point::set_coord(unsigned int number, double value)
 
 
 
-//-------------------------------------------------------
-//
-// Edge
-//
-//-------------------------------------------------------
-Edge::Edge()
-{
-  vertices[0] = vertices[1] = 0;
-}
+////-------------------------------------------------------
+////
+//// Edge
+////
+////-------------------------------------------------------
+//Edge::Edge()
+//{
+//  vertices[0] = vertices[1] = 0;
+//}
 
-Edge::Edge(unsigned int v1, unsigned int v2)
-{
-  vertices[0] = std::min(v1, v2);
-  vertices[1] = std::max(v1, v2);
-}
+//Edge::Edge(unsigned int v1, unsigned int v2)
+//{
+//  vertices[0] = std::min(v1, v2);
+//  vertices[1] = std::max(v1, v2);
+//}
 
-Edge::Edge(const Edge& e)
-{
-  vertices[0] = e.vertices[0];
-  vertices[1] = e.vertices[1];
-}
+//Edge::Edge(const Edge& e)
+//{
+//  vertices[0] = e.vertices[0];
+//  vertices[1] = e.vertices[1];
+//}
 
-Edge& Edge::operator =(const Edge& e)
-{
-  vertices[0] = e.vertices[0];
-  vertices[1] = e.vertices[1];
-  return *this;
-}
+//Edge& Edge::operator =(const Edge& e)
+//{
+//  vertices[0] = e.vertices[0];
+//  vertices[1] = e.vertices[1];
+//  return *this;
+//}
 
-inline unsigned int Edge::get_beg() const
-{
-  return vertices[0];
-}
+//inline unsigned int Edge::get_beg() const
+//{
+//  return vertices[0];
+//}
 
-inline unsigned int Edge::get_end() const
-{
-  return vertices[1];
-}
+//inline unsigned int Edge::get_end() const
+//{
+//  return vertices[1];
+//}
 
 
 
@@ -198,12 +198,20 @@ Line& Line::operator =(const Line& line)
   return *this;
 }
 
-bool Line::operator ==(const Edge &edge) const
+//bool Line::operator ==(const Edge &edge) const
+//{
+//  return ((vertices[0] == edge.get_beg() && vertices[1] == edge.get_end())
+//          ||
+//          (vertices[0] == edge.get_end() && vertices[1] == edge.get_beg()));
+//}
+
+bool Line::operator ==(const Line &line) const
 {
-  return ((vertices[0] == edge.get_beg() && vertices[1] == edge.get_end())
+  return ((vertices[0] == line.get_beg() && vertices[1] == line.get_end())
           ||
-          (vertices[0] == edge.get_end() && vertices[1] == edge.get_beg()));
+          (vertices[0] == line.get_end() && vertices[1] == line.get_beg()));
 }
+
 
 inline unsigned int Line::get_beg() const
 {
@@ -1037,7 +1045,9 @@ void Mesh::edge_numeration()
           // set the global number of edge to cell
           triangles[cell].set_edge(lne, gne);
           // initialize edge
-          edges[gne] = Edge(jj, ii);
+          edges[gne] = Line(std::min(ii, jj),
+                            std::max(ii, jj),
+                            triangles[cell].get_material_id());
           ++lne;
         }
       }
@@ -1066,21 +1076,21 @@ void Mesh::write(const std::string &file)
     out << "\n";
   }
 
-  const unsigned int n_elements = elements.size();
-  out << "$EndNodes\n$Elements\n" << n_elements << "\n";
-  for (unsigned int el = 0; el < n_elements; ++el)
-  {
-    out << el + 1                          /* serial number of element */
-        << elements[el].el_type_gmsh       /* type of element suitable for Gmsh */
-        << " 2 "                           /* the number of tags */
-        << elements[el].get_material_id()  /* physical domain */
-        << elements[el].get_material_id(); /* elemetary domain - let it be the same */
-    for (unsigned int ver = 0; ver < elements[el].n_vertices; ++ver)
-      out << elements[el].get_vertex(ver) << " ";
-    out << "\n";
-  }
+//  const unsigned int n_elements = elements.size();
+//  out << "$EndNodes\n$Elements\n" << n_elements << "\n";
+//  for (unsigned int el = 0; el < n_elements; ++el)
+//  {
+//    out << el + 1                          /* serial number of element */
+//        << elements[el].el_type_gmsh       /* type of element suitable for Gmsh */
+//        << " 2 "                           /* the number of tags */
+//        << elements[el].get_material_id()  /* physical domain */
+//        << elements[el].get_material_id(); /* elemetary domain - let it be the same */
+//    for (unsigned int ver = 0; ver < elements[el].n_vertices; ++ver)
+//      out << elements[el].get_vertex(ver) << " ";
+//    out << "\n";
+//  }
 
-  /*
+
   const unsigned int n_elements = quadrangles.size() + lines.size();
   out << "$EndNodes\n$Elements\n" << n_elements << "\n";
   for (unsigned int el = 0; el < quadrangles.size(); ++el)
@@ -1097,7 +1107,7 @@ void Mesh::write(const std::string &file)
         << " " << lines[el].get_material_id() << " "
         << lines[el].get_beg() + 1 << " " << lines[el].get_end() + 1;
     out << "\n";
-  }*/
+  }
 
   out << "$EndElements\n";
 

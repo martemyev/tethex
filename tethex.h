@@ -295,9 +295,10 @@ public:
   void set_end(unsigned int ver);
 
                 /**
-                 * Comparing line and edge by their vertices
+                 * Comparing lines by their vertices
                  */
-  bool operator ==(const Edge &edge) const;
+  //bool operator ==(const Edge &edge) const;
+  bool operator ==(const Line &line) const;
 
 private:
                 /**
@@ -733,9 +734,10 @@ private:
   std::vector<Line> lines;
 
                 /**
-                 * Mesh edges
+                 * Mesh edges (oriented lines)
                  */
-  std::vector<Edge> edges;
+  //std::vector<Edge> edges;
+  std::vector<Line> edges;
 
                 /**
                  * Mesh triangles
