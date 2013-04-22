@@ -112,44 +112,103 @@ void Point::set_coord(unsigned int number, double value)
 
 
 
-////-------------------------------------------------------
-////
-//// Edge
-////
-////-------------------------------------------------------
-//Edge::Edge()
-//{
-//  vertices[0] = vertices[1] = 0;
-//}
 
-//Edge::Edge(unsigned int v1, unsigned int v2)
-//{
-//  vertices[0] = std::min(v1, v2);
-//  vertices[1] = std::max(v1, v2);
-//}
+//-------------------------------------------------------
+//
+// MeshElement
+//
+//-------------------------------------------------------
+MeshElement::MeshElement(unsigned int n_ver,
+                         unsigned int n_edg,
+                         unsigned int el_type)
+  : n_vertices(n_ver),
+    n_edges(n_edg),
+    gmsh_el_type(el_type),
+    material_id(0)
+{
+  vertices.resize(n_vertices, 0);
+  edges.resize(n_edges, 0);
+}
 
-//Edge::Edge(const Edge& e)
-//{
-//  vertices[0] = e.vertices[0];
-//  vertices[1] = e.vertices[1];
-//}
+MeshElement::~MeshElement()
+{
+  vertices.clear();
+  edges.clear();
+}
 
-//Edge& Edge::operator =(const Edge& e)
-//{
-//  vertices[0] = e.vertices[0];
-//  vertices[1] = e.vertices[1];
-//  return *this;
-//}
+inline unsigned int MeshElement::get_n_vertices() const
+{
+  return n_vertices;
+}
 
-//inline unsigned int Edge::get_beg() const
-//{
-//  return vertices[0];
-//}
+unsigned int MeshElement::get_n_edges() const
+{
+  return n_edges;
+}
 
-//inline unsigned int Edge::get_end() const
-//{
-//  return vertices[1];
-//}
+unsigned int MeshElement::get_gmsh_el_type() const
+{
+  return gmsh_el_type;
+}
+
+unsigned int MeshElement::get_material_id() const
+{
+  return material_id;
+}
+
+MeshElement::MeshElement(const MeshElement &elem)
+  : n_vertices(elem.n_vertices),
+    n_edges(elem.n_edges),
+    gmsh_el_type(elem.gmsh_el_type),
+    material_id(elem.material_id)
+{
+  vertices = elem.vertices;
+  edges = elem.edges;
+}
+
+MeshElement& MeshElement::operator =(const MeshElement &elem)
+{
+  n_vertices = elem.n_vertices;
+  n_edges = elem.n_edges;
+  gmsh_el_type = elem.gmsh_el_type;
+  material_id = elem.material_id;
+  vertices = elem.vertices;
+  edges = elem.edges;
+  return *this;
+}
+
+inline unsigned int MeshElement::get_vertex(unsigned int number) const
+{
+  expect(number < n_vertices,
+         "The local number of vertex is incorrect: " + d2s(number) +
+         ". It has to be in range [0, " + d2s(n_vertices) + ").");
+  return vertices[number];
+}
+
+inline unsigned int MeshElement::get_edge(unsigned int number) const
+{
+  expect(number < n_edges,
+         "The local number of edge is incorrect: " + d2s(number) +
+         ". It has to be in range [0, " + d2s(n_edges) + ").");
+  return edges[number];
+}
+
+void MeshElement::set_vertex(unsigned int local_number, unsigned int global_number)
+{
+  expect(local_number < n_vertices,
+         "Local number (" + d2s(local_number) +
+         ") is incorrect. It must be in the range [0, " + d2s(n_edges) + ")");
+  vertices[local_number] = global_number;
+}
+
+void MeshElement::set_edge(unsigned int local_number, unsigned int global_number)
+{
+  expect(local_number < n_edges,
+         "Local number (" + d2s(local_number) +
+         ") is incorrect. It must be in the range [0, " + d2s(n_edges) + ")");
+  edges[local_number] = global_number;
+}
+
 
 
 
@@ -160,77 +219,35 @@ void Point::set_coord(unsigned int number, double value)
 //
 //-------------------------------------------------------
 Line::Line()
-  : material_id(0)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+{ }
+
+Line::Line(const std::vector<unsigned int> &ver,
+           const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
 {
-  vertices[0] = vertices[1] = 0;
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
 }
 
-
-Line::Line(const std::vector<unsigned int> &ver, const unsigned int mat_id)
-  : material_id(mat_id)
-{
-  expect(ver.size() == n_vertices,
-         "The size of vector of vertices (" +
-         d2s(ver.size()) + ") is not equal to " + d2s(n_vertices) + "!");
-  vertices[0] = ver[0];
-  vertices[1] = ver[1];
-}
-
-Line::Line(unsigned int v1, unsigned int v2, unsigned int mat_id)
-  : material_id(mat_id)
+Line::Line(const unsigned int v1,
+           const unsigned int v2,
+           const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
 {
   vertices[0] = v1;
   vertices[1] = v2;
+  material_id = mat_id;
 }
-
-Line::Line(const Line& line)
-  : material_id(line.material_id)
-{
-  vertices[0] = line.vertices[0];
-  vertices[1] = line.vertices[1];
-}
-
-Line& Line::operator =(const Line& line)
-{
-  vertices[0] = line.vertices[0];
-  vertices[1] = line.vertices[1];
-  material_id = line.material_id;
-  return *this;
-}
-
-//bool Line::operator ==(const Edge &edge) const
-//{
-//  return ((vertices[0] == edge.get_beg() && vertices[1] == edge.get_end())
-//          ||
-//          (vertices[0] == edge.get_end() && vertices[1] == edge.get_beg()));
-//}
 
 bool Line::operator ==(const Line &line) const
 {
-  return ((vertices[0] == line.get_beg() && vertices[1] == line.get_end())
+  return ((vertices[0] == line.vertices[0] && vertices[1] == line.vertices[1])
           ||
-          (vertices[0] == line.get_end() && vertices[1] == line.get_beg()));
-}
-
-
-inline unsigned int Line::get_beg() const
-{
-  return vertices[0];
-}
-
-inline unsigned int Line::get_end() const
-{
-  return vertices[1];
-}
-
-inline unsigned int Line::get_material_id() const
-{
-  return material_id;
-}
-
-inline void Line::set_end(unsigned int ver)
-{
-  vertices[1] = ver;
+          (vertices[0] == line.vertices[1] && vertices[1] == line.vertices[0]));
 }
 
 
@@ -243,81 +260,19 @@ inline void Line::set_end(unsigned int ver)
 //
 //-------------------------------------------------------
 Triangle::Triangle()
-  : material_id(0)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+{ }
+
+
+Triangle::Triangle(const std::vector<unsigned int> &ver,
+                   const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
 {
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = 0;
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = 0;
-}
-
-
-Triangle::Triangle(const std::vector<unsigned int> &ver, const unsigned int mat_id)
-  : material_id(mat_id)
-{
-  expect(ver.size() == n_vertices,
-         "The size of vector of vertices (" +
-         d2s(ver.size()) + ") is not equal to " + d2s(n_vertices) + "!");
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = ver[i];
-}
-
-
-Triangle::Triangle(const Triangle &tri)
-  : material_id(tri.material_id)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = tri.vertices[i];
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = tri.edges[i];
-}
-
-
-
-Triangle& Triangle::operator =(const Triangle &tri)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = tri.vertices[i];
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = tri.edges[i];
-  material_id = tri.material_id;
-  return *this;
-}
-
-
-
-inline unsigned int Triangle::get_vertex(unsigned int number) const
-{
-  expect(number < n_vertices,
-         "The local number of vertex is incorrect: " + d2s(number) +
-         ". It has to be in range [0, " + d2s(n_vertices) + ").");
-  return vertices[number];
-}
-
-
-
-inline unsigned int Triangle::get_edge(unsigned int number) const
-{
-  expect(number < n_edges,
-         "The local number of edge is incorrect: " + d2s(number) +
-         ". It has to be in range [0, " + d2s(n_edges) + ").");
-  return edges[number];
-}
-
-
-
-inline unsigned int Triangle::get_material_id() const
-{
-  return material_id;
-}
-
-
-void Triangle::set_edge(unsigned int local_number, unsigned int global_number)
-{
-  expect(local_number < n_edges,
-         "Local number (" + d2s(local_number) +
-         ") is incorrect. It must be in the range [0, " + d2s(n_edges) + ")");
-  edges[local_number] = global_number;
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
 }
 
 
@@ -329,72 +284,19 @@ void Triangle::set_edge(unsigned int local_number, unsigned int global_number)
 //
 //-------------------------------------------------------
 Tetrahedron::Tetrahedron()
-  : material_id(0)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+{ }
+
+
+Tetrahedron::Tetrahedron(const std::vector<unsigned int> &ver,
+                         const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
 {
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = 0;
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = 0;
-}
-
-
-Tetrahedron::Tetrahedron(const std::vector<unsigned int> &ver, const unsigned int mat_id)
-  : material_id(mat_id)
-{
-  expect(ver.size() == n_vertices,
-         "The size of vector of vertices (" +
-         d2s(ver.size()) + ") is not equal to " + d2s(n_vertices) + "!");
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = ver[i];
-}
-
-
-Tetrahedron::Tetrahedron(const Tetrahedron &tet)
-  : material_id(tet.material_id)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = tet.vertices[i];
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = tet.edges[i];
-}
-
-
-
-Tetrahedron& Tetrahedron::operator =(const Tetrahedron &tet)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = tet.vertices[i];
-  for (unsigned int i = 0; i < n_edges; ++i)
-    edges[i] = tet.edges[i];
-  material_id = tet.material_id;
-  return *this;
-}
-
-
-
-inline unsigned int Tetrahedron::get_vertex(unsigned int number) const
-{
-  expect(number < n_vertices,
-         "The local number of vertex is incorrect: " + d2s(number) +
-         ". It has to be in range [0, " + d2s(n_vertices) + ").");
-  return vertices[number];
-}
-
-
-
-inline unsigned int Tetrahedron::get_edge(unsigned int number) const
-{
-  expect(number < n_edges,
-         "The local number of edge is incorrect: " + d2s(number) +
-         ". It has to be in range [0, " + d2s(n_edges) + ").");
-  return edges[number];
-}
-
-
-
-inline unsigned int Tetrahedron::get_material_id() const
-{
-  return material_id;
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
 }
 
 
@@ -406,84 +308,20 @@ inline unsigned int Tetrahedron::get_material_id() const
 //
 //-------------------------------------------------------
 Quadrangle::Quadrangle()
-  : material_id(0)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+{ }
+
+
+Quadrangle::Quadrangle(const std::vector<unsigned int> &ver,
+                       const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, gmsh_el_type)
 {
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = 0;
-  //for (unsigned int i = 0; i < n_edges; ++i)
-  //  edges[i] = 0;
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
 }
-
-
-Quadrangle::Quadrangle(const std::vector<unsigned int> &ver, const unsigned int mat_id)
-  : material_id(mat_id)
-{
-  expect(ver.size() == n_vertices,
-         "The size of vector of vertices (" +
-         d2s(ver.size()) + ") is not equal to " + d2s(n_vertices) + "!");
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = ver[i];
-}
-
-
-Quadrangle::Quadrangle(const Quadrangle &quad)
-  : material_id(quad.material_id)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = quad.vertices[i];
-  //for (unsigned int i = 0; i < n_edges; ++i)
-  //  edges[i] = quad.edges[i];
-}
-
-
-
-Quadrangle& Quadrangle::operator =(const Quadrangle &quad)
-{
-  for (unsigned int i = 0; i < n_vertices; ++i)
-    vertices[i] = quad.vertices[i];
-  //for (unsigned int i = 0; i < n_edges; ++i)
-  //  edges[i] = quad.edges[i];
-  material_id = quad.material_id;
-  return *this;
-}
-
-
-
-inline unsigned int Quadrangle::get_vertex(unsigned int number) const
-{
-  expect(number < n_vertices,
-         "The local number of vertex is incorrect: " + d2s(number) +
-         ". It has to be in range [0, " + d2s(n_vertices) + ").");
-  return vertices[number];
-}
-
-
-
-//inline unsigned int Quadrangle::get_edge(unsigned int number) const
-//{
-//  expect(number < n_edges,
-//         "The local number of edge is incorrect: " + d2s(number) +
-//         ". It has to be in range [0, " + d2s(n_edges) + ").");
-//  return edges[number];
-//}
-
-
-
-inline unsigned int Quadrangle::get_material_id() const
-{
-  return material_id;
-}
-
-
-//void Quadrangle::set_edge(unsigned int local_number, unsigned int global_number)
-//{
-//  expect(local_number < n_edges,
-//         "Local number (" + d2s(local_number) +
-//         ") is incorrect. It must be in the range [0, " + d2s(n_edges) + ")");
-//  edges[local_number] = global_number;
-//}
-
-
 
 
 
@@ -594,8 +432,7 @@ inline unsigned int IncidenceMatrix::get_n_nonzero() const
 //
 //-------------------------------------------------------
 Mesh::Mesh()
-{
-}
+{ }
 
 
 Mesh::~Mesh()
@@ -902,8 +739,8 @@ void Mesh::convert()
   // add 'edge'-nodes - at the middle of edge
   for (unsigned int edge = 0; edge < edges.size(); ++edge)
   {
-    const unsigned int beg_ver = edges[edge].get_beg();
-    const unsigned int end_ver = edges[edge].get_end();
+    const unsigned int beg_ver = edges[edge].get_vertex(0);
+    const unsigned int end_ver = edges[edge].get_vertex(1);
     expect(beg_ver < n_old_vertices,
            "The first vertex (" + d2s(beg_ver) +
            ") of edge (" + d2s(edge) + ") is more than number of vertices (" +
@@ -948,9 +785,9 @@ void Mesh::convert()
       for (unsigned int edge = 0; edge < Triangle::n_edges; ++edge)
       {
         const unsigned int edge_number = triangles[tri].get_edge(edge);
-        if ((vertex_number == edges[edge_number].get_beg())
+        if ((vertex_number == edges[edge_number].get_vertex(0))
             ||
-            (vertex_number == edges[edge_number].get_end()))
+            (vertex_number == edges[edge_number].get_vertex(1)))
           quadrangle_vertices[number_of_quad_vert++] = n_old_vertices + edge_number;
       }
       expect(number_of_quad_vert - 1 == 2,
@@ -1004,8 +841,8 @@ void Mesh::convert()
       if (lines[line] == edges[edge])
       {
         // we change existing line and add new line in the end of list
-        const unsigned int end_ver = lines[line].get_end();
-        lines[line].set_end(n_old_vertices + edge); // change existing line
+        const unsigned int end_ver = lines[line].get_vertex(1);
+        lines[line].set_vertex(1, n_old_vertices + edge); // change existing line
         // add new line
         lines.push_back(Line(n_old_vertices + edge,
                              end_ver,
@@ -1105,7 +942,7 @@ void Mesh::write(const std::string &file)
     out << quadrangles.size() + el + 1
         << " 1 2 " << lines[el].get_material_id()
         << " " << lines[el].get_material_id() << " "
-        << lines[el].get_beg() + 1 << " " << lines[el].get_end() + 1;
+        << lines[el].get_vertex(0) + 1 << " " << lines[el].get_vertex(1) + 1;
     out << "\n";
   }
 

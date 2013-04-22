@@ -147,78 +147,119 @@ private:
 class MeshElement
 {
 public:
-  virtual unsigned int get_n_vertices() = 0;
-  virtual unsigned int get_n_edges() = 0;
-  virtual unsigned int get_gmsh_el_type() = 0;
+                /**
+                 * Get the number of vertices
+                 */
+  unsigned int get_n_vertices() const;
 
+                /**
+                 * Get the number of edges
+                 */
+  unsigned int get_n_edges() const;
 
+                /**
+                 * Get type of the element that is used in Gmsh
+                 */
+  unsigned int get_gmsh_el_type() const;
+
+                /**
+                 * Get the material ID of the element
+                 * @return The number that describes the physical domain to which the element belongs
+                 */
+  unsigned int get_material_id() const;
+
+                /**
+                 * Get the number of vertex describing the element
+                 * @param number - local number of vertex [0, n_vertices)
+                 * @return global number of vertex (among other mesh vertices)
+                 */
+  unsigned int get_vertex(unsigned int number) const;
+
+                /**
+                 * Get the number of edge describing the element
+                 * @param number - local number of edge [0, n_edges)
+                 * @return global number of edge (among other mesh edges)
+                 */
+  unsigned int get_edge(unsigned int number) const;
+
+                /**
+                 * Set the number of vertex
+                 * @param local_number - the number of vertex inside the element [0, n_vertices)
+                 * @param global_unmber - the number of vertex among other vertices of the mesh
+                 */
+  void set_vertex(unsigned int local_number, unsigned int global_number);
+
+                /**
+                 * Set the number of edge
+                 * @param local_number - the number of edge inside the element [0, n_edges)
+                 * @param global_unmber - the number of edge among other edges of the mesh
+                 */
+  void set_edge(unsigned int local_number, unsigned int global_number);
+
+protected:
+                /**
+                 * The number of vertices describing the element.
+                 * It must be defined in each derived class,
+                 * because it's 0 by default.
+                 */
+  unsigned int n_vertices;
+
+                /**
+                 * Vertices (i.e. their global numbers) describing the element
+                 */
+  std::vector<unsigned int> vertices;
+
+                /**
+                 * The number of edges describing the element.
+                 * It must be defined in each derived class,
+                 * because it's 0 by default.
+                 */
+  unsigned int n_edges;
+
+                /**
+                 * Edges (i.e. their global numbers) describing the element
+                 * It's not always used.
+                 */
+  std::vector<unsigned int> edges;
+
+                /**
+                 * ID of the physical domain where the element takes place.
+                 * It's necessary to distinguish media with different physical properties.
+                 */
+  unsigned int material_id;
+
+                /**
+                 * Type of the element (its number actually) like in Gmsh.
+                 * It must be defined in every derived class.
+                 * It's 0 be default.
+                 */
+  unsigned int gmsh_el_type;
+
+                /**
+                 * Constructor is protected to prevent creating MeshElement objects directly
+                 * @param n_ver - number of vertices
+                 * @param n_edg - number of edges
+                 * @param el_type - type of the element in Gmsh
+                 */
+  MeshElement(unsigned int n_ver = 0,
+              unsigned int n_edg = 0,
+              unsigned int el_type = 0);
+
+                /**
+                 * Copy constructor
+                 */
+  MeshElement(const MeshElement &elem);
+
+                /**
+                 * Copy assignment operator
+                 */
+  MeshElement& operator =(const MeshElement &elem);
+
+                /**
+                 * Destructor
+                 */
+  virtual ~MeshElement();
 };
-
-
-
-/*do we really need such type as edge?
-   it can be succefully replaced by line!
-    one thing - ordering - we can do it in procedure of edge defining - that's all!!!!
-    I think...
-*/
-
-//-------------------------------------------------------
-//
-// Edge
-//
-//-------------------------------------------------------
-///**
-// * Edge keeps just 2 numbers - the number of beginning vertex
-// * and the number of the ending one. And these numbers are ordered.
-// * That's all.
-// */
-//class Edge
-//{
-//public:
-//                /**
-//                 * The number of vertices to describe an edge.
-//                 * It's always 2.
-//                 */
-//  static const unsigned int n_vertices = 2;
-
-//                /**
-//                 * Constructor
-//                 */
-//  Edge();
-
-//                /**
-//                 * Constructor
-//                 */
-//  Edge(unsigned int v1, unsigned int v2);
-
-//                /**
-//                 * Copy constructor
-//                 */
-//  Edge(const Edge& e);
-
-//                /**
-//                 * Copy assignment operator
-//                 */
-//  Edge& operator =(const Edge& e);
-
-//                /**
-//                 * Get the beginning vertex
-//                 */
-//  unsigned int get_beg() const;
-
-//                /**
-//                 * Get the ending vertex
-//                 */
-//  unsigned int get_end() const;
-
-//private:
-//                /**
-//                 * The numbers of beginning and ending vertex of edge.
-//                 * The edge is always oriented from the smallest number
-//                 * to the biggest one.
-//                 */
-//  unsigned int vertices[n_vertices];
-//};
 
 
 
@@ -235,13 +276,23 @@ public:
  * Therefore, Line is like an Edge but vertices are not ordered, and
  * plus material_id exists.
  */
-class Line// : public MeshElement
+class Line : public MeshElement
 {
 public:
                 /**
-                 * As in case of Edge, there 2 vertices to describe a line
+                 * There are 2 vertices to describe a line
                  */
   static const unsigned int n_vertices = 2;
+
+                /**
+                 * Line is edge itself, so the number of edges is 1
+                 */
+  static const unsigned int n_edges = 1;
+
+                /**
+                 * In Gmsh line (physical line) is defined by number 1
+                 */
+  static const unsigned int gmsh_el_type = 1;
 
                 /**
                  * Constructor
@@ -253,7 +304,8 @@ public:
                  * @param ver - the list of vertices
                  * @param mat_id - the material ID
                  */
-  Line(const std::vector<unsigned int> &ver, const unsigned int mat_id);
+  Line(const std::vector<unsigned int> &ver,
+       const unsigned int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -261,55 +313,14 @@ public:
                  * @param v2 - another vertex
                  * @param mat_id - material ID
                  */
-  Line(unsigned int v1, unsigned int v2, unsigned int mat_id);
-
-                /**
-                 * Copy constructor
-                 */
-  Line(const Line& line);
-
-                /**
-                 * Copy assignment operator
-                 */
-  Line& operator =(const Line& line);
-
-                /**
-                 * Get the beginning vertex
-                 */
-  unsigned int get_beg() const;
-
-                /**
-                 * Get the ending vertex
-                 */
-  unsigned int get_end() const;
-
-                /**
-                 * Get the material ID
-                 */
-  unsigned int get_material_id() const;
-
-                /**
-                 * Set the value of ending vertex
-                 * @param ver - new value
-                 */
-  void set_end(unsigned int ver);
+  Line(const unsigned int v1,
+       const unsigned int v2,
+       const unsigned int mat_id = 0);
 
                 /**
                  * Comparing lines by their vertices
                  */
-  //bool operator ==(const Edge &edge) const;
   bool operator ==(const Line &line) const;
-
-private:
-                /**
-                 * The numbers of beginning and ending vertex of line.
-                 */
-  unsigned int vertices[n_vertices];
-
-                /**
-                 * Material ID or number of physical entity
-                 */
-  unsigned int material_id;
 };
 
 
@@ -323,22 +334,26 @@ private:
 /**
  * Triangle - 2-dimensional simplex
  */
-class Triangle// : public MeshElement
+class Triangle : public MeshElement
 {
 public:
                 /**
-                 * the number of vertices of triangle
+                 * The number of vertices of triangle
                  */
   static const unsigned int n_vertices = 3;
 
                 /**
-                 * the number of edges of triangle
+                 * The number of edges of triangle
                  */
-  static const unsigned int n_edges    = 3;
+  static const unsigned int n_edges = 3;
 
                 /**
-                 * Default constructor.
-                 * All fields are initialized by 0
+                 * In Gmsh triangle is defined by number 2
+                 */
+  static const unsigned int gmsh_el_type = 2;
+
+                /**
+                 * Default constructor
                  */
   Triangle();
 
@@ -347,61 +362,8 @@ public:
                  * @param ver - triangle vertices
                  * @param mat_id - material ID
                  */
-  Triangle(const std::vector<unsigned int> &ver, const unsigned int mat_id);
-
-                /**
-                 * Copy constructor
-                 */
-  Triangle(const Triangle &tri);
-
-                /**
-                 * Copy assignment operator
-                 */
-  Triangle& operator =(const Triangle &tri);
-
-                /**
-                 * Get the number of vertex describing triangle
-                 * @param number - local number of vertex [0, n_vertices)
-                 * @return global number of vertex (among other mesh vertices)
-                 */
-  unsigned int get_vertex(unsigned int number) const;
-
-                /**
-                 * Get the number of edge describing triangle
-                 * @param number - local number of edge [0, n_edges)
-                 * @return global number of edge (among other mesh edges)
-                 */
-  unsigned int get_edge(unsigned int number) const;
-
-                /**
-                 * Get the material ID of triangle
-                 * @return The number that describes the physical domain to which triangle belongs
-                 */
-  unsigned int get_material_id() const;
-
-                /**
-                 * Set the number of edge
-                 * @param local_number - the number of edge inside this triangle [0, n_edges)
-                 * @param global_unmber - the number of edge among other edges of the mesh
-                 */
-  void set_edge(unsigned int local_number, unsigned int global_number);
-
-private:
-                /**
-                 * Vertices (i.e. their global numbers) describing triangle
-                 */
-  unsigned int vertices[n_vertices];
-
-                /**
-                 * Edges (i.e. their global numbers) describing triangle
-                 */
-  unsigned int edges[n_edges];
-
-                /**
-                 * ID of the physical domain where triangle takes place.
-                 * It's necessary to distinguish media with different physical properties.
-                 */
-  unsigned int material_id;
+  Triangle(const std::vector<unsigned int> &ver,
+           const unsigned int mat_id = 0);
 };
 
 
@@ -415,7 +377,7 @@ private:
 /**
  * Tetrahedron - 3-dimensional simplex
  */
-class Tetrahedron
+class Tetrahedron : public MeshElement
 {
 public:
                 /**
@@ -426,11 +388,15 @@ public:
                 /**
                  * the number of edges of tetrahedron
                  */
-  static const unsigned int n_edges    = 6;
+  static const unsigned int n_edges = 6;
+
+                /**
+                 * In Gmsh triangle is defined by number 2
+                 */
+  static const unsigned int gmsh_el_type = 4;
 
                 /**
                  * Default constructor.
-                 * All fields are initialized by 0
                  */
   Tetrahedron();
 
@@ -439,54 +405,8 @@ public:
                  * @param ver - triangle vertices
                  * @param mat_id - material ID
                  */
-  Tetrahedron(const std::vector<unsigned int> &ver, const unsigned int mat_id);
-
-                /**
-                 * Copy constructor
-                 */
-  Tetrahedron(const Tetrahedron &tet);
-
-                /**
-                 * Copy assignment operator
-                 */
-  Tetrahedron& operator =(const Tetrahedron &tet);
-
-                /**
-                 * Get the number of vertex describing tetrahedron
-                 * @param number - local number of vertex [0, n_vertices)
-                 * @return global number of vertex (among other mesh vertices)
-                 */
-  unsigned int get_vertex(unsigned int number) const;
-
-                /**
-                 * Get the number of edge describing tetrahedron
-                 * @param number - local number of edge [0, n_edges)
-                 * @return global number of edge (among other mesh edges)
-                 */
-  unsigned int get_edge(unsigned int number) const;
-
-                /**
-                 * Get the material ID of tetrahedron
-                 * @return The number that describes the physical domain to which tetrahedron belongs
-                 */
-  unsigned int get_material_id() const;
-
-private:
-                /**
-                 * Vertices (i.e. their global numbers) describing tetrahedron
-                 */
-  unsigned int vertices[n_vertices];
-
-                /**
-                 * Edges (i.e. their global numbers) describing tetrahedron
-                 */
-  unsigned int edges[n_edges];
-
-                /**
-                 * ID of the physical domain where tetrahedron takes place.
-                 * It's necessary to distinguish media with different physical properties.
-                 */
-  unsigned int material_id;
+  Tetrahedron(const std::vector<unsigned int> &ver,
+              const unsigned int mat_id = 0);
 };
 
 
@@ -500,7 +420,7 @@ private:
 /**
  * Quadrangle - 2-dimensional shape with 4 straight edges
  */
-class Quadrangle
+class Quadrangle : public MeshElement
 {
 public:
                 /**
@@ -511,11 +431,15 @@ public:
                 /**
                  * the number of edges of quadrangle
                  */
-  //static const unsigned int n_edges    = 4;
+  static const unsigned int n_edges = 4;
+
+                /**
+                 * In Gmsh triangle is defined by number 2
+                 */
+  static const unsigned int gmsh_el_type = 3;
 
                 /**
                  * Default constructor.
-                 * All fields are initialized by 0
                  */
   Quadrangle();
 
@@ -524,61 +448,8 @@ public:
                  * @param ver - triangle vertices
                  * @param mat_id - material ID
                  */
-  Quadrangle(const std::vector<unsigned int> &ver, const unsigned int mat_id);
-
-                /**
-                 * Copy constructor
-                 */
-  Quadrangle(const Quadrangle &quad);
-
-                /**
-                 * Copy assignment operator
-                 */
-  Quadrangle& operator =(const Quadrangle &quad);
-
-                /**
-                 * Get the number of vertex describing quadrangle
-                 * @param number - local number of vertex [0, n_vertices)
-                 * @return global number of vertex (among other mesh vertices)
-                 */
-  unsigned int get_vertex(unsigned int number) const;
-
-                /**
-                 * Get the number of edge describing quadrangle
-                 * @param number - local number of edge [0, n_edges)
-                 * @return global number of edge (among other mesh edges)
-                 */
-  //unsigned int get_edge(unsigned int number) const;
-
-                /**
-                 * Get the material ID of triangle
-                 * @return The number that describes the physical domain to which quadrangle belongs
-                 */
-  unsigned int get_material_id() const;
-
-                /**
-                 * Set the number of edge
-                 * @param local_number - the number of edge inside this quadrangle [0, n_edges)
-                 * @param global_unmber - the number of edge among other edges of the mesh
-                 */
-  //void set_edge(unsigned int local_number, unsigned int global_number);
-
-private:
-                /**
-                 * Vertices (i.e. their global numbers) describing quadrangle
-                 */
-  unsigned int vertices[n_vertices];
-
-                /**
-                 * Edges (i.e. their global numbers) describing quadrangle
-                 */
-  //unsigned int edges[n_edges];
-
-                /**
-                 * ID of the physical domain where triangle takes place.
-                 * It's necessary to distinguish media with different physical properties.
-                 */
-  unsigned int material_id;
+  Quadrangle(const std::vector<unsigned int> &ver,
+             const unsigned int mat_id = 0);
 };
 
 
