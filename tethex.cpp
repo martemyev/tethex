@@ -1,7 +1,7 @@
 #include "tethex.h"
 #include <algorithm>
 #include <fstream>
-#include <map>
+#include <iostream>
 
 TETHEX_NAMESPACE_OPEN
 
@@ -120,38 +120,56 @@ void Point::set_coord(unsigned int number, double value)
 //-------------------------------------------------------
 MeshElement::MeshElement(unsigned int n_ver,
                          unsigned int n_edg,
+                         unsigned int n_fac,
                          unsigned int el_type)
   : n_vertices(n_ver),
     n_edges(n_edg),
+    n_faces(n_fac),
     gmsh_el_type(el_type),
     material_id(0)
 {
   vertices.resize(n_vertices, 0);
   edges.resize(n_edges, 0);
+  faces.resize(n_faces, 0);
 }
 
 MeshElement::~MeshElement()
 {
   vertices.clear();
   edges.clear();
+  faces.clear();
 }
 
 inline unsigned int MeshElement::get_n_vertices() const
 {
+  expect(n_vertices == vertices.size(),
+         "Memory for vertices is not allocated properly (size is " + d2s(vertices.size()) +
+         "), or n_vertices (" + d2s(n_vertices) + ") is set to wrong number");
   return n_vertices;
 }
 
-unsigned int MeshElement::get_n_edges() const
+inline unsigned int MeshElement::get_n_edges() const
 {
+  expect(n_edges == edges.size(),
+         "Memory for edges is not allocated properly (size is " + d2s(edges.size()) +
+         "), or n_edges (" + d2s(n_edges) + ") is set to wrong number");
   return n_edges;
 }
 
-unsigned int MeshElement::get_gmsh_el_type() const
+inline unsigned int MeshElement::get_n_faces() const
+{
+  expect(n_faces == faces.size(),
+         "Memory for faces is not allocated properly (size is " + d2s(faces.size()) +
+         "), or n_faces (" + d2s(n_faces) + ") is set to wrong number");
+  return n_faces;
+}
+
+inline unsigned int MeshElement::get_gmsh_el_type() const
 {
   return gmsh_el_type;
 }
 
-unsigned int MeshElement::get_material_id() const
+inline unsigned int MeshElement::get_material_id() const
 {
   return material_id;
 }
@@ -159,21 +177,25 @@ unsigned int MeshElement::get_material_id() const
 MeshElement::MeshElement(const MeshElement &elem)
   : n_vertices(elem.n_vertices),
     n_edges(elem.n_edges),
+    n_faces(elem.n_faces),
     gmsh_el_type(elem.gmsh_el_type),
     material_id(elem.material_id)
 {
   vertices = elem.vertices;
   edges = elem.edges;
+  faces = elem.faces;
 }
 
 MeshElement& MeshElement::operator =(const MeshElement &elem)
 {
   n_vertices = elem.n_vertices;
   n_edges = elem.n_edges;
+  n_faces = elem.n_faces;
   gmsh_el_type = elem.gmsh_el_type;
   material_id = elem.material_id;
   vertices = elem.vertices;
   edges = elem.edges;
+  faces = elem.faces;
   return *this;
 }
 
@@ -193,6 +215,14 @@ inline unsigned int MeshElement::get_edge(unsigned int number) const
   return edges[number];
 }
 
+inline unsigned int MeshElement::get_face(unsigned int number) const
+{
+  expect(number < n_faces,
+         "The local number of face is incorrect: " + d2s(number) +
+         ". It has to be in range [0, " + d2s(n_faces) + ").");
+  return faces[number];
+}
+
 void MeshElement::set_vertex(unsigned int local_number, unsigned int global_number)
 {
   expect(local_number < n_vertices,
@@ -209,6 +239,37 @@ void MeshElement::set_edge(unsigned int local_number, unsigned int global_number
   edges[local_number] = global_number;
 }
 
+void MeshElement::set_face(unsigned int local_number, unsigned int global_number)
+{
+  expect(local_number < n_faces,
+         "Local number (" + d2s(local_number) +
+         ") is incorrect. It must be in the range [0, " + d2s(n_faces) + ")");
+  faces[local_number] = global_number;
+}
+
+void MeshElement::set_faces(std::vector<unsigned int> face_numbers)
+{
+  expect(face_numbers.size() == get_n_faces(),
+         "Array of face numbers has another size (" + d2s(face_numbers.size()) +
+         ") than it must be (" + d2s(get_n_faces()) + ")");
+  faces = face_numbers;
+}
+
+void MeshElement::add_face(unsigned int face_number)
+{
+  if (find(faces.begin(), faces.end(), face_number) == faces.end())
+    faces.push_back(face_number);
+}
+
+bool MeshElement::contains(const unsigned int vertex) const
+{
+  for (unsigned int i = 0; i < n_vertices; ++i)
+    if (vertex == vertices[i])
+      return true;
+  return false;
+}
+
+
 
 
 
@@ -219,12 +280,12 @@ void MeshElement::set_edge(unsigned int local_number, unsigned int global_number
 //
 //-------------------------------------------------------
 Line::Line()
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 { }
 
 Line::Line(const std::vector<unsigned int> &ver,
            const unsigned int mat_id)
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
@@ -236,7 +297,7 @@ Line::Line(const std::vector<unsigned int> &ver,
 Line::Line(const unsigned int v1,
            const unsigned int v2,
            const unsigned int mat_id)
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 {
   vertices[0] = v1;
   vertices[1] = v2;
@@ -250,6 +311,26 @@ bool Line::operator ==(const Line &line) const
           (vertices[0] == line.vertices[1] && vertices[1] == line.vertices[0]));
 }
 
+unsigned int Line::common_vertex(const Line& line) const
+{
+  for (unsigned int i = 0; i < n_vertices; ++i)
+    if (line.contains(vertices[i]))
+      return vertices[i];
+  require(false, "There is no common vertex between these two lines!");
+  return 0; // to calm compiler down
+}
+
+unsigned int Line::another_vertex(const unsigned int vertex) const
+{
+  if (vertex == vertices[0])
+    return vertices[1];
+  else if (vertex == vertices[1])
+    return vertices[0];
+  else
+    require(false, "This line doesn't contain the vertex. So we can't find another one.");
+  return 0; // to calm compiler down
+}
+
 
 
 
@@ -260,13 +341,13 @@ bool Line::operator ==(const Line &line) const
 //
 //-------------------------------------------------------
 Triangle::Triangle()
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 { }
 
 
 Triangle::Triangle(const std::vector<unsigned int> &ver,
                    const unsigned int mat_id)
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
@@ -284,13 +365,13 @@ Triangle::Triangle(const std::vector<unsigned int> &ver,
 //
 //-------------------------------------------------------
 Tetrahedron::Tetrahedron()
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 { }
 
 
 Tetrahedron::Tetrahedron(const std::vector<unsigned int> &ver,
                          const unsigned int mat_id)
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
@@ -308,13 +389,13 @@ Tetrahedron::Tetrahedron(const std::vector<unsigned int> &ver,
 //
 //-------------------------------------------------------
 Quadrangle::Quadrangle()
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 { }
 
 
 Quadrangle::Quadrangle(const std::vector<unsigned int> &ver,
                        const unsigned int mat_id)
-  : MeshElement(n_vertices, n_edges, gmsh_el_type)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
@@ -328,11 +409,36 @@ Quadrangle::Quadrangle(const std::vector<unsigned int> &ver,
 
 //-------------------------------------------------------
 //
+// Hexahedron
+//
+//-------------------------------------------------------
+Hexahedron::Hexahedron()
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
+{ }
+
+
+Hexahedron::Hexahedron(const std::vector<unsigned int> &ver,
+                       const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
+{
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
+}
+
+
+
+
+
+//-------------------------------------------------------
+//
 // IncidenceMatrix
 //
 //-------------------------------------------------------
 IncidenceMatrix::IncidenceMatrix(const unsigned int n_vertices,
-                                 const std::vector<Triangle> &cells)
+                                 const std::vector<MeshElement*> &cells)
   : dim(n_vertices)
 {
   std::vector<unsigned int> *vec = new std::vector<unsigned int>[dim]; // for lower triangle
@@ -340,12 +446,12 @@ IncidenceMatrix::IncidenceMatrix(const unsigned int n_vertices,
   for (unsigned int cell = 0; cell < cells.size(); ++cell)
   {
     // look at all pairs of cell vertices
-    for (unsigned int i = 0; i < Triangle::n_vertices; ++i)
+    for (unsigned int i = 0; i < cells[cell]->get_n_vertices(); ++i)
     {
-      const unsigned int ii = cells[cell].get_vertex(i);
-      for (unsigned int j = 0; j < Triangle::n_vertices; ++j)
+      const unsigned int ii = cells[cell]->get_vertex(i);
+      for (unsigned int j = 0; j < cells[cell]->get_n_vertices(); ++j)
       {
-        const unsigned int jj = cells[cell].get_vertex(j);
+        const unsigned int jj = cells[cell]->get_vertex(j);
         if (ii > jj) // we consider only lower triangle of matrix
         {
           // add to vector, if the vector doesn't contain this number
@@ -685,16 +791,20 @@ void Mesh::read(const std::string &file)
           }
 
           // add new element in the list
+          MeshElement *new_element;
           switch (el_type)
           {
           case 1: // 2-nodes line
-            lines.push_back(Line(nodes, phys_domain));
+            lines.push_back(new Line(nodes, phys_domain));
+            new_element = new Line(nodes, phys_domain);
             break;
           case 2: // 3-nodes triangle
-            triangles.push_back(Triangle(nodes, phys_domain));
+            triangles.push_back(new Triangle(nodes, phys_domain));
+            new_element = new Triangle(nodes, phys_domain);
             break;
           case 4: //4-nodes tetrahedron
-            tetrahedra.push_back(Tetrahedron(nodes, phys_domain));
+            tetrahedra.push_back(new Tetrahedron(nodes, phys_domain));
+            new_element = new Tetrahedron(nodes, phys_domain);
             break;
           default:
             require(false,
@@ -703,12 +813,16 @@ void Mesh::read(const std::string &file)
           }
 
           nodes.clear();
+
+          elements.push_back(new_element);
+          //delete new_element;
         }
 
         // check some expectations
         expect(number == n_elements,
                "The number of the last read element (" + d2s(number) +\
                ") is not equal to the amount of all elements in the mesh (" + d2s(n_elements) + ")!");
+
       } // ASCII format
 
       // expectations after reading elements
@@ -726,8 +840,25 @@ void Mesh::read(const std::string &file)
 
 void Mesh::convert()
 {
+  // we need to distinguish 2D and 3D
+  if (tetrahedra.empty())
+    convert_2D();
+  else
+    convert_3D();
+}
+
+
+// for triangle and tet
+void set_edge_nodes() {}
+void set_face_nodes() {}
+void set_cell_nodes() {}
+
+
+void Mesh::convert_2D()
+{
   // firstly we need to numerate all edges
-  edge_numeration();
+  const IncidenceMatrix incidence_matrix(vertices.size(), triangles);
+  edge_numeration(triangles, incidence_matrix);
 
   // after edge numbering
   // we should add new nodes -
@@ -765,8 +896,8 @@ void Mesh::convert()
       double coordinate = 0.;
       for (unsigned int ver = 0; ver < Triangle::n_vertices; ++ver)
       {
-        expect(triangles[tri].get_vertex(ver) < n_old_vertices, "");
-        coordinate += vertices[triangles[tri].get_vertex(ver)].get_coord(coord);
+        expect(triangles[tri]->get_vertex(ver) < n_old_vertices, "");
+        coordinate += vertices[triangles[tri]->get_vertex(ver)].get_coord(coord);
       }
       vertices[n_old_vertices + edges.size() + tri].set_coord(coord, coordinate / Triangle::n_vertices);
     }
@@ -779,12 +910,12 @@ void Mesh::convert()
   {
     for (unsigned int ver = 0; ver < Triangle::n_vertices; ++ver)
     {
-      const unsigned int vertex_number = triangles[tri].get_vertex(ver);
+      const unsigned int vertex_number = triangles[tri]->get_vertex(ver);
       quadrangle_vertices[0] = vertex_number;
       int number_of_quad_vert = 1;
       for (unsigned int edge = 0; edge < Triangle::n_edges; ++edge)
       {
-        const unsigned int edge_number = triangles[tri].get_edge(edge);
+        const unsigned int edge_number = triangles[tri]->get_edge(edge);
         if ((vertex_number == edges[edge_number].get_vertex(0))
             ||
             (vertex_number == edges[edge_number].get_vertex(1)))
@@ -819,7 +950,7 @@ void Mesh::convert()
         std::swap(quadrangle_vertices[1], quadrangle_vertices[3]);
 
       // now we are ready to generate quadrangle
-      Quadrangle quad(quadrangle_vertices, triangles[tri].get_material_id());
+      Quadrangle *quad = new Quadrangle(quadrangle_vertices, triangles[tri]->get_material_id());
       quadrangles.push_back(quad);
 
     } // for every vertex we have one quadrangle
@@ -830,6 +961,9 @@ void Mesh::convert()
           " is not equal to number of triangles (" + d2s(triangles.size()) +
           " multiplying by 3 (" + d2s(3 * triangles.size()) + ")");
 
+  // now we don't need triangles
+  triangles.clear();
+
   // after that we check boundary element
   // because after adding new vertices they need to be redefined
 
@@ -838,27 +972,267 @@ void Mesh::convert()
     // we need to find an edge that coincides with this line
     for (unsigned int edge = 0; edge < edges.size(); ++edge)
     {
-      if (lines[line] == edges[edge])
+      if (*(lines[line]) == edges[edge])
       {
         // we change existing line and add new line in the end of list
-        const unsigned int end_ver = lines[line].get_vertex(1);
-        lines[line].set_vertex(1, n_old_vertices + edge); // change existing line
+        const unsigned int end_ver = lines[line]->get_vertex(1);
+        lines[line]->set_vertex(1, n_old_vertices + edge); // change existing line
         // add new line
-        lines.push_back(Line(n_old_vertices + edge,
-                             end_ver,
-                             lines[line].get_material_id()));
+        lines.push_back(new Line(n_old_vertices + edge,
+                                 end_ver,
+                                 lines[line]->get_material_id()));
       }
     }
   }
-
 }
 
 
 
-void Mesh::edge_numeration()
+
+void Mesh::convert_3D()
 {
-  // matrix of incidence between vertices of the mesh
-  const IncidenceMatrix incidence_matrix(vertices.size(), triangles);
+  const IncidenceMatrix incidence_matrix(vertices.size(), tetrahedra);
+
+  // firstly - edge numeration
+  edge_numeration(tetrahedra, incidence_matrix);
+
+  // the main structure - this vector of maps
+  // vector's element is associated with mesh edges and vector
+  // has size = n_edges.
+  // the map's element - pair of numbers:
+  // the key - number of vertex, opposite to the suitable edge,
+  // the value - number of suitable face, defining by edge and vertex
+  // opposite to edge
+  std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence(edges.size());
+
+  // after that - face numeration
+  face_numeration(tetrahedra, incidence_matrix, edge_vertex_incidence);
+
+  // some checks
+  expect(vertices.size() + faces.size() - 1 == tetrahedra.size() + edges.size(),
+         "Some sophisticated assumption is not held!");
+
+  // after edge and face numbering
+  // we should add new nodes -
+  // one node at the middle of every edge,
+  // one node at the center of every face and
+  // one node at the center of every tetrahedron
+  const unsigned int n_old_vertices = vertices.size();
+  vertices.resize(n_old_vertices + edges.size() + faces.size() + tetrahedra.size());
+
+  // add 'edge'-nodes - at the middle of edge
+  for (unsigned int edge = 0; edge < edges.size(); ++edge)
+  {
+    const unsigned int beg_ver = edges[edge].get_vertex(0);
+    const unsigned int end_ver = edges[edge].get_vertex(1);
+    expect(beg_ver < n_old_vertices,
+           "The first vertex (" + d2s(beg_ver) +
+           ") of edge (" + d2s(edge) + ") is more than number of vertices (" +
+           d2s(n_old_vertices) + ")");
+    expect(end_ver < n_old_vertices,
+           "The second vertex (" + d2s(end_ver) +
+           ") of edge (" + d2s(edge) + ") is more than number of vertices (" +
+           d2s(n_old_vertices) + ")");
+    for (unsigned int coord = 0; coord < Point::n_coord; ++coord)
+    {
+      vertices[n_old_vertices + edge].set_coord(coord,
+                                                (vertices[beg_ver].get_coord(coord) +
+                                                 vertices[end_ver].get_coord(coord)) / 2.);
+    }
+  }
+
+  // add 'face'-nodes - at the center of face
+  for (unsigned int face = 0; face < faces.size(); ++face)
+  {
+    for (unsigned int coord = 0; coord < Point::n_coord; ++coord)
+    {
+      double coordinate = 0.;
+      for (unsigned int ver = 0; ver < Triangle::n_vertices; ++ver)
+      {
+        const unsigned int cur_vertex = faces[face].get_vertex(ver);
+        expect(cur_vertex < n_old_vertices,
+               "The current vertex (" + d2s(cur_vertex) +
+               ") is more than number of vertices that we have (" + d2s(n_old_vertices) + ")");
+        coordinate += vertices[cur_vertex].get_coord(coord);
+      }
+      vertices[n_old_vertices + edges.size() + face].set_coord(coord, coordinate / Triangle::n_vertices);
+    }
+  }
+
+  // add 'tetrahedron'-nodes - at the center of every tetrahedron
+  for (unsigned int tet = 0; tet < tetrahedra.size(); ++tet)
+  {
+    for (unsigned int coord = 0; coord < Point::n_coord; ++coord)
+    {
+      double coordinate = 0.;
+      for (unsigned int ver = 0; ver < Tetrahedron::n_vertices; ++ver)
+      {
+        const unsigned int cur_vertex = tetrahedra[tet]->get_vertex(ver);
+        expect(cur_vertex < n_old_vertices,
+               "The current vertex (" + d2s(cur_vertex) +
+               ") is more than number of vertices that we have (" + d2s(n_old_vertices) + ")");
+        coordinate += vertices[cur_vertex].get_coord(coord);
+      }
+      vertices[n_old_vertices + edges.size() + faces.size() + tet].set_coord(coord, coordinate / Tetrahedron::n_vertices);
+    }
+  }
+
+  // now we generate hexahedrons
+  std::vector<unsigned int> hexahedron_vertices(Hexahedron::n_vertices);
+
+  for (unsigned int tet = 0; tet < tetrahedra.size(); ++tet)
+  {
+    for (unsigned int ver = 0; ver < Tetrahedron::n_vertices; ++ver)
+    {
+      // current vertex
+      const unsigned int cur_vertex = tetrahedra[tet]->get_vertex(ver);
+
+      // we're looking for 3 edges to which this vertex belongs
+      std::vector<unsigned int> seek_edges;
+      for (unsigned int edge = 0; edge < Tetrahedron::n_edges; ++edge)
+      {
+        const unsigned int cur_edge = tetrahedra[tet]->get_edge(edge);
+        if (edges[cur_edge].contains(cur_vertex))
+          seek_edges.push_back(cur_edge);
+      }
+      expect(seek_edges.size() == 3, "");
+
+      hexahedron_vertices[0] = cur_vertex;
+      hexahedron_vertices[1] = n_old_vertices + seek_edges[0];
+      hexahedron_vertices[2] = n_old_vertices + edges.size() +
+                               find_face_from_two_edges(seek_edges[0], seek_edges[1],
+                                                        incidence_matrix, edge_vertex_incidence);
+      hexahedron_vertices[3] = n_old_vertices + seek_edges[1];
+      hexahedron_vertices[4] = n_old_vertices + seek_edges[2];
+      hexahedron_vertices[5] = n_old_vertices + edges.size() +
+                               find_face_from_two_edges(seek_edges[0], seek_edges[2],
+                                                        incidence_matrix, edge_vertex_incidence);
+      hexahedron_vertices[6] = n_old_vertices + edges.size() + faces.size() + tet;
+      hexahedron_vertices[7] = n_old_vertices + edges.size() +
+                               find_face_from_two_edges(seek_edges[1], seek_edges[2],
+                                                        incidence_matrix, edge_vertex_incidence);
+
+      // check cell measure to be sure that we numerate all hexahedra in one way
+      // this measure taken from deal.II.
+
+      // convert the order of vertices to suitable for deal.II to check the cell measure
+      std::vector<unsigned int> vertices_dealII_order(Hexahedron::n_vertices);
+      unsigned int order_to_deal[] = { 0, 1, 5, 4, 2, 3, 7, 6 };
+
+      for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
+        vertices_dealII_order[order_to_deal[i]] = hexahedron_vertices[i];
+
+      if (cell_measure_3D(vertices, vertices_dealII_order) < 0)
+        // reorder vertices -  swap front and back faces
+        for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
+          std::swap(hexahedron_vertices[i], hexahedron_vertices[i + 4]);
+
+      // now generate hexahedron
+      hexahedra.push_back(new Hexahedron(hexahedron_vertices,
+                                         tetrahedra[tet]->get_material_id()));
+
+    } // vertices
+  } // tetrahedra
+
+  require(tetrahedra.size() * 4 == hexahedra.size(),
+          "The number of hexahedra (" + d2s(hexahedra.size()) +
+          " is not equal to number of tetrahedra (" + d2s(tetrahedra.size()) +
+          " multiplying by 3 (" + d2s(3 * tetrahedra.size()) + ")");
+
+  // now we don't need tetrahedra
+  tetrahedra.clear();
+
+  // now we generate quadrangles
+//  std::vector<unsigned int> quadrangle_vertices(Quadrangle::n_vertices);
+
+//  for (unsigned int tri = 0; tri < triangles.size(); ++tri)
+//  {
+//    for (unsigned int ver = 0; ver < Triangle::n_vertices; ++ver)
+//    {
+//      const unsigned int vertex_number = triangles[tri]->get_vertex(ver);
+//      quadrangle_vertices[0] = vertex_number;
+//      int number_of_quad_vert = 1;
+//      for (unsigned int edge = 0; edge < Triangle::n_edges; ++edge)
+//      {
+//        const unsigned int edge_number = triangles[tri]->get_edge(edge);
+//        if ((vertex_number == edges[edge_number].get_vertex(0))
+//            ||
+//            (vertex_number == edges[edge_number].get_vertex(1)))
+//          quadrangle_vertices[number_of_quad_vert++] = n_old_vertices + edge_number;
+//      }
+//      expect(number_of_quad_vert - 1 == 2,
+//             "The number of edges to which every vertex belongs must be equal to 2");
+
+//      quadrangle_vertices[number_of_quad_vert] = n_old_vertices + edges.size() + tri;
+//      // swap 2 values to make right order
+//      std::swap(quadrangle_vertices[2], quadrangle_vertices[3]);
+
+//      // but though the order of vertices is right it may be clockwise and counterclockwise,
+//      // and it's important not to mix these 2 directions.
+//      // so, we need additional check as deal.II authors do.
+//      // taken from deal.II
+//      const double x[] = { vertices[quadrangle_vertices[0]].get_coord(0),
+//                           vertices[quadrangle_vertices[1]].get_coord(0),
+//                           vertices[quadrangle_vertices[2]].get_coord(0),
+//                           vertices[quadrangle_vertices[3]].get_coord(0)
+//                         };
+//      const double y[] = { vertices[quadrangle_vertices[0]].get_coord(1),
+//                           vertices[quadrangle_vertices[1]].get_coord(1),
+//                           vertices[quadrangle_vertices[2]].get_coord(1),
+//                           vertices[quadrangle_vertices[3]].get_coord(1)
+//                         };
+//      const double cell_measure = (-x[1]*y[0]+x[1]*y[3]+
+//                                    y[0]*x[2]+x[0]*y[1]-
+//                                    x[0]*y[2]-y[1]*x[3]-
+//                                    x[2]*y[3]+x[3]*y[2]) / 2.;
+//      if (cell_measure < 0)
+//        std::swap(quadrangle_vertices[1], quadrangle_vertices[3]);
+
+//      // now we are ready to generate quadrangle
+//      Quadrangle *quad = new Quadrangle(quadrangle_vertices, triangles[tri]->get_material_id());
+//      quadrangles.push_back(quad);
+
+//    } // for every vertex we have one quadrangle
+//  }
+
+//  require(triangles.size() * 3 == quadrangles.size(),
+//          "The number of quadrangles (" + d2s(quadrangles.size()) +
+//          " is not equal to number of triangles (" + d2s(triangles.size()) +
+//          " multiplying by 3 (" + d2s(3 * triangles.size()) + ")");
+
+//  // now we don't need triangles
+//  triangles.clear();
+
+//  // after that we check boundary element
+//  // because after adding new vertices they need to be redefined
+
+//  for (unsigned int line = 0; line < lines.size(); ++line)
+//  {
+//    // we need to find an edge that coincides with this line
+//    for (unsigned int edge = 0; edge < edges.size(); ++edge)
+//    {
+//      if (*(lines[line]) == edges[edge])
+//      {
+//        // we change existing line and add new line in the end of list
+//        const unsigned int end_ver = lines[line]->get_vertex(1);
+//        lines[line]->set_vertex(1, n_old_vertices + edge); // change existing line
+//        // add new line
+//        lines.push_back(new Line(n_old_vertices + edge,
+//                                 end_ver,
+//                                 lines[line]->get_material_id()));
+//      }
+//    }
+//  }
+}
+
+
+
+
+void Mesh::edge_numeration(std::vector<MeshElement*> &cells,
+                           const IncidenceMatrix &incidence_matrix)
+{
+  //// matrix of incidence between vertices of the mesh
+  //const IncidenceMatrix incidence_matrix(vertices.size(), cells);
 
   // the number of edges in such mesh - the number of non zero elements in incidence matrix
   const unsigned int n_edges = incidence_matrix.get_n_nonzero();
@@ -867,34 +1241,113 @@ void Mesh::edge_numeration()
   edges.resize(n_edges);
 
   // look through all cells of the mesh
-  for (unsigned int cell = 0; cell < triangles.size(); ++cell)
+  for (unsigned int cell = 0; cell < cells.size(); ++cell)
   {
     unsigned int lne = 0; // local number of the edge (0 <= lne < cell::n_edges)
-    for (unsigned int i = 0; i < Triangle::n_vertices; ++i)
+    for (unsigned int i = 0; i < cells[cell]->get_n_vertices(); ++i)
     {
-      const unsigned int ii = triangles[cell].get_vertex(i);
-      for (unsigned int j = 0; j < Triangle::n_vertices; ++j)
+      const unsigned int ii = cells[cell]->get_vertex(i);
+      for (unsigned int j = 0; j < cells[cell]->get_n_vertices(); ++j)
       {
-        const unsigned int jj = triangles[cell].get_vertex(j);
+        const unsigned int jj = cells[cell]->get_vertex(j);
         if (ii > jj) // ii must be bigger than jj
         {
           const unsigned int gne = incidence_matrix.find(ii, jj); // global number of edge
           // set the global number of edge to cell
-          triangles[cell].set_edge(lne, gne);
+          cells[cell]->set_edge(lne, gne);
           // initialize edge
           edges[gne] = Line(std::min(ii, jj),
                             std::max(ii, jj),
-                            triangles[cell].get_material_id());
+                            cells[cell]->get_material_id());
           ++lne;
         }
       }
     }
-    expect(lne == Triangle::n_edges,
-           "lne must be equal to " + d2s(Triangle::n_edges) +
+    expect(lne == cells[cell]->get_n_edges(),
+           "lne must be equal to " + d2s(cells[cell]->get_n_edges()) +
            ", but it is " + d2s(lne));
   }
 
 } // edge numeration
+
+
+
+
+void Mesh::face_numeration(std::vector<MeshElement*> &cells,
+                           const IncidenceMatrix &incidence_matrix,
+                           std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence)
+{
+  unsigned int n_faces = 0; // the number of all faces and the number of current face
+
+  for (unsigned int cell = 0; cell < cells.size(); ++cell)
+  {
+    std::vector<unsigned int> face_numbers;
+    for (unsigned int edge = 0; edge < cells[cell]->get_n_edges(); ++edge)
+    {
+      unsigned int cur_edge = cells[cell]->get_edge(edge);
+      for (unsigned int ver = 0; ver < cells[cell]->get_n_vertices(); ++ver)
+      {
+        unsigned int cur_vertex = cells[cell]->get_vertex(ver);
+        if (!edges[cur_edge].contains(cur_vertex)) // if edge doesn't contain vertex - they are opposite to each other
+        {
+          // edge and vertex opposite to it - they define a face
+          if (edge_vertex_incidence[cur_edge].find(cur_vertex) == edge_vertex_incidence[cur_edge].end())
+          {
+            // if there is no such pair of edge and vertex -
+            // that means that this face was not numerated yet.
+            // so do it now
+            edge_vertex_incidence[cur_edge][cur_vertex] = n_faces;
+
+            // and we should do it for all pairs of edges and opposite vertices
+            // for this face to avoid duplicates.
+            unsigned int another_edge = incidence_matrix.find(std::max(edges[cur_edge].get_vertex(0), cur_vertex),
+                                                              std::min(edges[cur_edge].get_vertex(0), cur_vertex));
+            edge_vertex_incidence[another_edge][edges[cur_edge].get_vertex(1)] = n_faces;
+
+            // and once more time
+            another_edge = incidence_matrix.find(std::max(edges[cur_edge].get_vertex(1), cur_vertex),
+                                                 std::min(edges[cur_edge].get_vertex(1), cur_vertex));
+            edge_vertex_incidence[another_edge][edges[cur_edge].get_vertex(0)] = n_faces;
+
+            // create array of face's vertices
+            std::vector<unsigned int> face_vertices(3);
+            face_vertices[0] = edges[cur_edge].get_vertex(0);
+            face_vertices[1] = edges[cur_edge].get_vertex(1);
+            face_vertices[2] = cur_vertex;
+            sort(face_vertices.begin(), face_vertices.end());
+
+            // add this face to faces list
+            faces.push_back(Triangle(face_vertices, cells[cell]->get_material_id()));
+
+            // add the number of face into array
+            face_numbers.push_back(n_faces);
+
+            // increase the number of faces
+            ++n_faces;
+          }
+          else // this face already exsists
+          {
+            // add the number of face into array
+            // if there is no such number there yet
+            const unsigned int fnumber = edge_vertex_incidence[cur_edge].find(cur_vertex)->second;
+            if (find(face_numbers.begin(), face_numbers.end(), fnumber) == face_numbers.end())
+              face_numbers.push_back(fnumber);
+          }
+        } // find opposite vertex
+      } // vertices
+    } // edges
+
+    expect(face_numbers.size() == cells[cell]->get_n_faces(),
+           "There is no enough faces for " + d2s(cell) +
+           "-th cell. It's " + d2s(face_numbers.size()) +
+           ". But is must be " + d2s(cells[cell]->get_n_faces()));
+
+    // set these face numbers as cell's faces
+    cells[cell]->set_faces(face_numbers);
+
+  } // cells
+} // face numeration
+
 
 
 
@@ -928,21 +1381,36 @@ void Mesh::write(const std::string &file)
 //  }
 
 
-  const unsigned int n_elements = quadrangles.size() + lines.size();
+//  const unsigned int n_elements = quadrangles.size() + lines.size();
+//  out << "$EndNodes\n$Elements\n" << n_elements << "\n";
+//  for (unsigned int el = 0; el < quadrangles.size(); ++el)
+//  {
+//    out << el + 1 << " 3 2 " << quadrangles[el]->get_material_id() << " 0 ";
+//    for (unsigned int ver = 0; ver < Quadrangle::n_vertices; ++ver)
+//      out << quadrangles[el]->get_vertex(ver) + 1 << " ";
+//    out << "\n";
+//  }
+//  for (unsigned int el = 0; el < lines.size(); ++el)
+//  {
+//    out << quadrangles.size() + el + 1
+//        << " 1 2 " << lines[el]->get_material_id()
+//        << " " << lines[el]->get_material_id() << " "
+//        << lines[el]->get_vertex(0) + 1 << " " << lines[el]->get_vertex(1) + 1;
+//    out << "\n";
+//  }
+
+  std::vector<MeshElement*> &elems = hexahedra;
+  const unsigned int n_elements = elems.size();
   out << "$EndNodes\n$Elements\n" << n_elements << "\n";
-  for (unsigned int el = 0; el < quadrangles.size(); ++el)
+  for (unsigned int el = 0; el < n_elements; ++el)
   {
-    out << el + 1 << " 3 2 " << quadrangles[el].get_material_id() << " 0 ";
-    for (unsigned int ver = 0; ver < Quadrangle::n_vertices; ++ver)
-      out << quadrangles[el].get_vertex(ver) + 1 << " ";
-    out << "\n";
-  }
-  for (unsigned int el = 0; el < lines.size(); ++el)
-  {
-    out << quadrangles.size() + el + 1
-        << " 1 2 " << lines[el].get_material_id()
-        << " " << lines[el].get_material_id() << " "
-        << lines[el].get_vertex(0) + 1 << " " << lines[el].get_vertex(1) + 1;
+    out << el + 1 << " "                        /* serial number of element */
+        << elems[el]->get_gmsh_el_type()        /* type of element suitable for Gmsh */
+        << " 2 "                                /* the number of tags */
+        << elems[el]->get_material_id() << " "  /* physical domain */
+        << elems[el]->get_material_id() << " "; /* elemetary domain - let it be the same */
+    for (unsigned int ver = 0; ver < elems[el]->get_n_vertices(); ++ver)
+      out << elems[el]->get_vertex(ver) + 1 << " ";
     out << "\n";
   }
 
@@ -984,9 +1452,202 @@ void Mesh::info(std::ostream &out) const
       << "\nedges       : " << edges.size()
       << "\nlines       : " << lines.size()
       << "\ntriangles   : " << triangles.size()
+      << "\nfaces       : " << faces.size()
       << "\ntetrahedra  : " << tetrahedra.size()
       << "\nquadrangles : " << quadrangles.size()
+      << "\nhexahedra   : " << hexahedra.size()
       << "\n\n";
+}
+
+void Mesh::statistics(std::ostream &out) const
+{
+//  const unsigned int n_elements = elements.size();
+//  out << "\nn_elements : " << n_elements << "\n";
+//  for (unsigned int el = 0; el < n_elements; ++el)
+//  {
+//    out << el + 1 << " "                           /* serial number of element */
+//        << elements[el]->get_gmsh_el_type() << " " /* type of element suitable for Gmsh */
+//        << elements[el]->get_material_id() << " "; /* physical domain */
+//    for (unsigned int ver = 0; ver < elements[el]->get_n_vertices(); ++ver)
+//      out << elements[el]->get_vertex(ver) << " ";
+//    out << "\n";
+//  }
+//  out << "\n";
+
+  out << "\nvertices:\n";
+  for (unsigned int i = 0; i < vertices.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < Point::n_coord; ++j)
+      out << vertices[i].get_coord(j) << " ";
+    out << "\n";
+  }
+
+  out << "\nedges:\n";
+  for (unsigned int i = 0; i < edges.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < Line::n_vertices; ++j)
+      out << edges[i].get_vertex(j) << " ";
+    out << "\n";
+  }
+
+  out << "\ntets:\n";
+  for (unsigned int i = 0; i < tetrahedra.size(); ++i)
+  {
+    out << i << "  ";
+    for (unsigned int j = 0; j < Tetrahedron::n_vertices; ++j)
+      out << tetrahedra[i]->get_vertex(j) << " ";
+    out << " | ";
+    for (unsigned int j = 0; j < Tetrahedron::n_edges; ++j)
+      out << tetrahedra[i]->get_edge(j) << " ";
+    out << " | ";
+    for (unsigned int j = 0; j < Tetrahedron::n_faces; ++j)
+      out << tetrahedra[i]->get_face(j) << " ";
+    out << "\n";
+  }
+
+  out << "\nfaces:\n";
+  for (unsigned int i = 0; i < faces.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < faces[i].get_n_vertices(); ++j)
+      out << faces[i].get_vertex(j) << " ";
+    out << "\n";
+  }
+  out << "\n";
+
+}
+
+
+
+unsigned int Mesh::find_face_from_two_edges(const unsigned int edge1,
+                                            const unsigned int edge2,
+                                            const IncidenceMatrix &vertices_incidence,
+                                            const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence) const
+{
+  // find common vertex
+  const unsigned int common_vertex = edges[edge1].common_vertex(edges[edge2]);
+
+  // find other 2 vertices
+  const unsigned int ver1 = edges[edge1].another_vertex(common_vertex);
+  const unsigned int ver2 = edges[edge2].another_vertex(common_vertex);
+
+  // find opposite edge
+  const unsigned int opposite_edge = vertices_incidence.find(std::max(ver1, ver2), std::min(ver1, ver2));
+
+  // find the number of face
+  return edge_vertex_incidence[opposite_edge].find(common_vertex)->second;
+}
+
+
+
+
+
+//-------------------------------------------------------
+//
+// Auxiliary functions
+//
+//-------------------------------------------------------
+double cell_measure_3D(const std::vector<Point> &vertices,
+                       const std::vector<unsigned int> &indices)
+{
+  const double x[8] = { vertices[indices[0]].get_coord(0),
+                        vertices[indices[1]].get_coord(0),
+                        vertices[indices[2]].get_coord(0),
+                        vertices[indices[3]].get_coord(0),
+                        vertices[indices[4]].get_coord(0),
+                        vertices[indices[5]].get_coord(0),
+                        vertices[indices[6]].get_coord(0),
+                        vertices[indices[7]].get_coord(0)
+                      };
+  const double y[8] = { vertices[indices[0]].get_coord(1),
+                        vertices[indices[1]].get_coord(1),
+                        vertices[indices[2]].get_coord(1),
+                        vertices[indices[3]].get_coord(1),
+                        vertices[indices[4]].get_coord(1),
+                        vertices[indices[5]].get_coord(1),
+                        vertices[indices[6]].get_coord(1),
+                        vertices[indices[7]].get_coord(1)
+                      };
+  const double z[8] = { vertices[indices[0]].get_coord(2),
+                        vertices[indices[1]].get_coord(2),
+                        vertices[indices[2]].get_coord(2),
+                        vertices[indices[3]].get_coord(2),
+                        vertices[indices[4]].get_coord(2),
+                        vertices[indices[5]].get_coord(2),
+                        vertices[indices[6]].get_coord(2),
+                        vertices[indices[7]].get_coord(2)
+                      };
+
+  const double t3 = y[3]*x[2];
+  const double t5 = z[1]*x[5];
+  const double t9 = z[3]*x[2];
+  const double t11 = x[1]*y[0];
+  const double t14 = x[4]*y[0];
+  const double t18 = x[5]*y[7];
+  const double t20 = y[1]*x[3];
+  const double t22 = y[5]*x[4];
+  const double t26 = z[7]*x[6];
+  const double t28 = x[0]*y[4];
+  const double t34 = z[3]*x[1]*y[2]+t3*z[1]-t5*y[7]+y[7]*x[4]*z[6]+t9*y[6]-
+                     t11*z[4]-t5*y[3]-t14*z[2]+z[1]*x[4]*y[0]-t18*z[3]+
+                     t20*z[0]-t22*z[0]-y[0]*x[5]*z[4]-t26*y[3]+t28*z[2]-
+                     t9*y[1]-y[1]*x[4]*z[0]-t11*z[5];
+  const double t37 = y[1]*x[0];
+  const double t44 = x[1]*y[5];
+  const double t46 = z[1]*x[0];
+  const double t49 = x[0]*y[2];
+  const double t52 = y[5]*x[7];
+  const double t54 = x[3]*y[7];
+  const double t56 = x[2]*z[0];
+  const double t58 = x[3]*y[2];
+  const double t64 = -x[6]*y[4]*z[2]-t37*z[2]+t18*z[6]-x[3]*y[6]*z[2]+
+                     t11*z[2]+t5*y[0]+t44*z[4]-t46*y[4]-t20*z[7]-t49*z[6]-
+                     t22*z[1]+t52*z[3]-t54*z[2]-t56*y[4]-t58*z[0]+
+                     y[1]*x[2]*z[0]+t9*y[7]+t37*z[4];
+  const double t66 = x[1]*y[7];
+  const double t68 = y[0]*x[6];
+  const double t70 = x[7]*y[6];
+  const double t73 = z[5]*x[4];
+  const double t76 = x[6]*y[7];
+  const double t90 = x[4]*z[0];
+  const double t92 = x[1]*y[3];
+  const double t95 = -t66*z[3]-t68*z[2]-t70*z[2]+t26*y[5]-t73*y[6]-
+                     t14*z[6]+t76*z[2]-t3*z[6]+x[6]*y[2]*z[4]-
+                     z[3]*x[6]*y[2]+t26*y[4]-t44*z[3]-x[1]*y[2]*z[0]+
+                     x[5]*y[6]*z[4]+t54*z[5]+t90*y[2]-t92*z[2]+t46*y[2];
+  const double t102 = x[2]*y[0];
+  const double t107 = y[3]*x[7];
+  const double t114 = x[0]*y[6];
+  const double t125 = y[0]*x[3]*z[2]-z[7]*x[5]*y[6]-x[2]*y[6]*z[4]+
+                      t102*z[6]-t52*z[6]+x[2]*y[4]*z[6]-t107*z[5]-
+                      t54*z[6]+t58*z[6]-x[7]*y[4]*z[6]+t37*z[5]-t114*z[4]+
+                      t102*z[4]-z[1]*x[2]*y[0]+t28*z[6]-y[5]*x[6]*z[4]-z[5]*x[1]*y[4]-t73*y[7];
+  const double t129 = z[0]*x[6];
+  const double t133 = y[1]*x[7];
+  const double t145 = y[1]*x[5];
+  const double t156 = t90*y[6]-t129*y[4]+z[7]*x[2]*y[6]-t133*z[5]+
+                      x[5]*y[3]*z[7]-t26*y[2]-t70*z[3]+t46*y[3]+
+                      z[5]*x[7]*y[4]+z[7]*x[3]*y[6]-t49*z[4]+t145*z[7]-
+                      x[2]*y[7]*z[6]+t70*z[5]+t66*z[5]-z[7]*x[4]*y[6]+t18*z[4]+x[1]*y[4]*z[0];
+  const double t160 = x[5]*y[4];
+  const double t165 = z[1]*x[7];
+  const double t178 = z[1]*x[3];
+  const double t181 = t107*z[6]+t22*z[7]+t76*z[3]+t160*z[1]-x[4]*y[2]*z[6]+
+                      t70*z[4]+t165*y[5]+x[7]*y[2]*z[6]-t76*z[5]-t76*z[4]+
+                      t133*z[3]-t58*z[1]+y[5]*x[0]*z[4]+t114*z[2]-
+                      t3*z[7]+t20*z[2]+t178*y[7]+t129*y[2];
+  const double t207 = t92*z[7]+t22*z[6]+z[3]*x[0]*y[2]-x[0]*y[3]*z[2]-
+                      z[3]*x[7]*y[2]-t165*y[3]-t9*y[0]+t58*z[7]+
+                      y[3]*x[6]*z[2]+t107*z[2]+t73*y[0]-x[3]*y[5]*z[7]+
+                      t3*z[0]-t56*y[6]-z[5]*x[0]*y[4]+t73*y[1]-t160*z[6]+t160*z[0];
+  const double t228 = -t44*z[7]+z[5]*x[6]*y[4]-t52*z[4]-t145*z[4]+t68*z[4]+
+                      t92*z[5]-t92*z[0]+t11*z[3]+t44*z[0]+t178*y[5]-t46*y[5]-
+                      t178*y[0]-t145*z[0]-t20*z[5]-t37*z[3]-
+                      t160*z[7]+t145*z[3]+x[4]*y[6]*z[2];
+
+  return (t34+t64+t95+t125+t156+t181+t207+t228)/12.;
 }
 
 
