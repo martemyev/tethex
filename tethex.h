@@ -1,5 +1,5 @@
-#ifndef TETHEX_H
-#define TETHEX_H
+#ifndef TETHEX_TETHEX_H
+#define TETHEX_TETHEX_H
 
 #include <string>
 #include <stdexcept>
@@ -9,6 +9,8 @@
 
 #define TETHEX_NAMESPACE_OPEN namespace tethex {
 #define TETHEX_NAMESPACE_CLOSE }
+
+//const double COMPARE_POINTS_TOLERANCE = 1e-14;
 
 TETHEX_NAMESPACE_OPEN
 
@@ -102,9 +104,20 @@ public:
   Point();
 
                 /**
-                 * Constructor
+                 * Constructor with parameter
+                 * @param coordinates - array of point coordinates
                  */
   Point(const double coordinates[]);
+
+                /**
+                 * Constructor with parameters
+                 * @param x_coord - x-coordinate of the point
+                 * @param y_coord - y-coordinate of the point
+                 * @param z_coord - z-coordinate of the point
+                 */
+  Point(const double x_coord,
+        const double y_coord = 0,
+        const double z_coord = 0);
 
                 /**
                  * Copy constructor
@@ -128,6 +141,11 @@ public:
                  * @param value - new value of coordinate
                  */
   void set_coord(unsigned int number, double value);
+
+//                /**
+//                 * Comparing two points
+//                 */
+//  bool operator ==(const Point &point) const;
 
 private:
                 /**
@@ -373,10 +391,10 @@ public:
        const unsigned int v2,
        const unsigned int mat_id = 0);
 
-                /**
-                 * Comparing lines by their vertices
-                 */
-  bool operator ==(const Line &line) const;
+//                /**
+//                 * Comparing lines by their vertices
+//                 */
+//  bool operator ==(const Line &line) const;
 
                 /**
                  * Find vertex common with another line
@@ -435,6 +453,18 @@ public:
                  */
   Triangle(const std::vector<unsigned int> &ver,
            const unsigned int mat_id = 0);
+
+                /**
+                 * Constructor with parameters
+                 * @param v1 - first vertex
+                 * @param v2 - second vertex
+                 * @param v3 - third vertex
+                 * @param mat_id - material ID
+                 */
+  Triangle(const unsigned int v1,
+           const unsigned int v2,
+           const unsigned int v3,
+           const unsigned int mat_id = 0);
 };
 
 
@@ -482,6 +512,20 @@ public:
                  * @param mat_id - material ID
                  */
   Tetrahedron(const std::vector<unsigned int> &ver,
+              const unsigned int mat_id = 0);
+
+                /**
+                 * Constructor with parameters
+                 * @param v1 - first vertex
+                 * @param v2 - second vertex
+                 * @param v3 - third vertex
+                 * @param v4 - fourth vertex
+                 * @param mat_id - material ID
+                 */
+  Tetrahedron(const unsigned int v1,
+              const unsigned int v2,
+              const unsigned int v3,
+              const unsigned int v4,
               const unsigned int mat_id = 0);
 };
 
@@ -531,6 +575,20 @@ public:
                  */
   Quadrangle(const std::vector<unsigned int> &ver,
              const unsigned int mat_id = 0);
+
+                /**
+                 * Constructor with parameters
+                 * @param v1 - first vertex
+                 * @param v2 - second vertex
+                 * @param v3 - third vertex
+                 * @param v4 - fourth vertex
+                 * @param mat_id - material ID
+                 */
+  Quadrangle(const unsigned int v1,
+             const unsigned int v2,
+             const unsigned int v3,
+             const unsigned int v4,
+             const unsigned int mat_id = 0);
 };
 
 
@@ -579,6 +637,21 @@ public:
                  * @param mat_id - material ID
                  */
   Hexahedron(const std::vector<unsigned int> &ver,
+             const unsigned int mat_id = 0);
+
+                /**
+                 * Constructor with parameters
+                 * @param v1 - v8 - vertices of hexahedron
+                 * @param mat_id - material ID
+                 */
+  Hexahedron(const unsigned int v1,
+             const unsigned int v2,
+             const unsigned int v3,
+             const unsigned int v4,
+             const unsigned int v5,
+             const unsigned int v6,
+             const unsigned int v7,
+             const unsigned int v8,
              const unsigned int mat_id = 0);
 };
 
@@ -712,11 +785,24 @@ public:
   unsigned int get_n_triangles() const;
 
                 /**
+                 * Get the number of faces
+                 */
+  unsigned int get_n_faces() const;
+
+                /**
                  * Get the number of tetrahedra
                  */
   unsigned int get_n_tetrahedra() const;
 
-  //unsigned int get_n_elements() const;
+                /**
+                 * Get the number of tetrahedra
+                 */
+  unsigned int get_n_quadrangles() const;
+
+                /**
+                 * Get the number of hexahedra
+                 */
+  unsigned int get_n_hexahedra() const;
 
                 /**
                  * Print information about mesh
@@ -728,30 +814,74 @@ public:
                  */
   void statistics(std::ostream &out) const;
 
+                /**
+                 * Get the copy of vertex
+                 * @param number - the number of vertex
+                 */
+  Point get_vertex(const unsigned int number) const;
+
+                /**
+                 * Get the mesh edge
+                 * @param number - the number of edge
+                 */
+  MeshElement& get_edge(const unsigned int number) const;
+
+                /**
+                 * Get the physical line
+                 * @param number - the number of line
+                 */
+  MeshElement& get_line(const unsigned int number) const;
+
+                /**
+                 * Get the mesh face
+                 * @param number - the number of face
+                 */
+  MeshElement& get_face(const unsigned int number) const;
+
+                /**
+                 * Get the mesh triangle
+                 * @param number - the number of triangle
+                 */
+  MeshElement& get_triangle(const unsigned int number) const;
+
+                /**
+                 * Get the mesh tetrahedron
+                 * @param number - the number of tetrahedron
+                 */
+  MeshElement& get_tetrahedron(const unsigned int number) const;
+
+                /**
+                 * Get the mesh quadrangle
+                 * @param number - the number of quadrangle
+                 */
+  MeshElement& get_quadrangle(const unsigned int number) const;
+
+                /**
+                 * Get the mesh hexahedron
+                 * @param number - the number of hexahedron
+                 */
+  MeshElement& get_hexahedron(const unsigned int number) const;
+
 private:
                 /**
                  * Mesh vertices (nodes)
                  */
   std::vector<Point> vertices;
 
-
-  std::vector<MeshElement*> elements;
-
                 /**
                  * Mesh lines - mean physical lines
                  */
-  std::vector<Line*> lines;
+  std::vector<MeshElement*> lines;
 
                 /**
                  * Mesh edges (oriented lines)
                  */
-  //std::vector<Edge> edges;
-  std::vector<Line> edges;
+  std::vector<MeshElement*> edges;
 
                 /**
                  * Mesh faces
                  */
-  std::vector<Triangle> faces;
+  std::vector<MeshElement*> faces;
 
                 /**
                  * Mesh triangles
@@ -766,7 +896,7 @@ private:
                 /**
                  * Mesh quadrangles
                  */
-  std::vector<Quadrangle*> quadrangles;
+  std::vector<MeshElement*> quadrangles;
 
                 /**
                  * Mesh hexahedra
@@ -780,9 +910,14 @@ private:
 
                 /**
                  * Numerate the edges of simplices
+                 * @param cells - edges of what elements should me numerated - triangles or tetrahedra
+                 * @param incidence_matrix - matrix of vertices incidence
+                 * @param initialize_edges - wether we need to initialize the vector of all edges of the mesh
+                 *                           Sometimes we need to do it, sometimes we don't need (or even shouldn't).
                  */
   void edge_numeration(std::vector<MeshElement*> &cells,
-                       const IncidenceMatrix &incidence_matrix);
+                       const IncidenceMatrix &incidence_matrix,
+                       bool initialize_edges);
 
                 /**
                  * Numerate the faces of simplices
@@ -812,6 +947,22 @@ private:
                                         const unsigned int edge2,
                                         const IncidenceMatrix &vertices_incidence,
                                         const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence) const;
+
+  void set_new_vertices(const std::vector<MeshElement*> &elements,
+                        const unsigned int n_old_vertices,
+                        const unsigned int shift);
+
+  void convert_tetrahedra(const unsigned int n_old_vertices,
+                          const IncidenceMatrix &incidence_matrix,
+                          const std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence);
+
+  void convert_triangles(const IncidenceMatrix &incidence_matrix,
+                         const unsigned int n_old_vertices,
+                         bool numerate_edges,
+                         const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence = std::vector<std::map<unsigned int, unsigned int> >());
+
+  void redefine_lines(const IncidenceMatrix &incidence_matrix,
+                      const unsigned int n_old_vertices);
 };
 
 
@@ -822,12 +973,18 @@ private:
 // Auxiliary functions
 //
 //-------------------------------------------------------
+double cell_measure_2D(const std::vector<Point> &vertices,
+                       const std::vector<unsigned int> &indices);
+
 double cell_measure_3D(const std::vector<Point> &vertices,
                        const std::vector<unsigned int> &indices);
 
+void write_elements(std::ostream &out,
+                    const std::vector<MeshElement*> &elems,
+                    unsigned int &k);
 
 
 
 TETHEX_NAMESPACE_CLOSE
 
-#endif // TETHEX_H
+#endif // TETHEX_TETHEX_H

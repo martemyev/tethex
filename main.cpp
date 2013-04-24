@@ -1,9 +1,20 @@
 #include "tethex.h"
+#include "config.h"
 #include <iostream>
 #include <cstdlib>
+#if TESTING
+  #include "testing.h"
+#endif
 
 int main(int argc, char **argv)
 {
+#if TESTING
+  std::cout << "\nWe are starting short testing procedures!\n\n";
+  ::testing::InitGoogleTest(&argc, argv);
+  int test_ret = RUN_ALL_TESTS();
+  std::cout << "\nThe returning values of all tests running is " << test_ret << "\n\n";
+#endif
+
   using namespace tethex;
 
   require(argc > 1,
