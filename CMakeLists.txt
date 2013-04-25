@@ -12,9 +12,17 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 project(tethex)
 
 
+# --- set version ---
+set(TETHEX_VERSION_MAJOR 0)
+set(TETHEX_VERSION_MINOR 0)
+set(TETHEX_VERSION_PATCH 1)
+
+
 # --- useful variables ---
-set(TESTING 1 CACHE BOOL "Do you want to launch testing procedure before using the program?")
-set(DELETE_SIMPLICES 0 CACHE BOOL "Delete simplices after converting them into bricks (to economize some memory)")
+#set(TESTING 1 CACHE BOOL "Do you want to launch testing procedure before using the program?")
+#set(DELETE_SIMPLICES 0 CACHE BOOL "Delete simplices after converting them into bricks (to economize some memory)")
+option(TESTING "Do you want to launch testing procedure before using the program?" OFF)
+option(DELETE_SIMPLICES "Delete simplices after converting them into bricks (to economize some memory)" ON)
 
 
 # --- write the variables initialized here to config.h file ---
@@ -31,7 +39,7 @@ set(HDR_LIST tethex.h)
 
 
 # --- Google Test ---
-if(TESTING MATCHES 1)
+if(TESTING)
   message("ATTENTION! This is a version with testing features!")
   set(GTEST_DIR /home/artemiev/projects/gtest-1.6.0 CACHE PATH "Path to Google Test top level directory")
   find_library(GTEST_LIB gtest ${GTEST_DIR}/lib/.libs)
@@ -41,12 +49,33 @@ if(TESTING MATCHES 1)
     message(FATAL_ERROR "GTest was not found!")
   endif(GTEST_LIB)
   include_directories(${GTEST_DIR}/include)
-endif(TESTING MATCHES 1)
+endif(TESTING)
 
 
 # --- make ---
 add_executable(${PROJECT_NAME} ${SRC_LIST} ${HDR_LIST})
-if(TESTING MATCHES 1)
+if(TESTING)
   target_link_libraries(${PROJECT_NAME} ${GTEST_LIB} pthread)
-endif(TESTING MATCHES 1)
+endif(TESTING)
 
+
+# --- packaging of the library ---
+# -- make package_source --
+set(CPACK_SOURCE_GENERATOR "TGZ")
+set(CPACK_SOURCE_VERSION_MAJOR "${TETHEX_VERSION_MAJOR}")
+set(CPACK_SOURCE_VERSION_MINOR "${TETHEX_VERSION_MINOR}")
+set(CPACK_SOURCE_VERSION_PATCH "${TETHEX_VERSION_PATCH}")
+set(CPACK_SOURCE_IGNORE_FILES "./*.user;build;doc;.git;.gitignore")
+include(CPack)
+
+
+# --- autodocumentation using doxygen ---
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/doxyfile.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/doxyfile")
+  add_custom_target(doc COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxyfile)
+else(DOXYGEN_FOUND)
+  message("WARNING: Doxygen is not found - Autodocumentation will not be created")
+endif(DOXYGEN_FOUND)

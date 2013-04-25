@@ -183,8 +183,7 @@ void test_2D(const std::string &mesh_file,
 
   // if we don't delete simplices,
   // we can compare edges of triangles
-#if DELETE_SIMPLICES
-#else
+#if !defined(DELETE_SIMPLICES)
   if (!triangles.empty())
     check_triangle_edges(mesh, triangles);
 #endif
@@ -256,8 +255,7 @@ void test_3D(const std::string &mesh_file,
   // if we don't delete simplices,
   // we can compare edges and faces of tetrahedra and
   // edges of boundary triangles
-#if DELETE_SIMPLICES
-#else
+#if !defined(DELETE_SIMPLICES)
   if (!tetrahedra.empty())
   {
     check_tetrahedron_edges(mesh, tetrahedra);

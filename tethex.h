@@ -1,16 +1,33 @@
 #ifndef TETHEX_TETHEX_H
 #define TETHEX_TETHEX_H
 
+/*
+ * tethex - tetrahedra to hexahedra conversion
+ * Copyright (c) 2013 Mikhail Artemiev
+ *
+ * http://code.google.com/p/tethex
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #include <string>
 #include <stdexcept>
 #include <sstream>
 #include <vector>
 #include <map>
+#include <iostream>
 
+// the idea of such definitions was seen in deal.II sources.
+// thanks to its authors for that
 #define TETHEX_NAMESPACE_OPEN namespace tethex {
 #define TETHEX_NAMESPACE_CLOSE }
-
-//const double COMPARE_POINTS_TOLERANCE = 1e-14;
 
 TETHEX_NAMESPACE_OPEN
 
@@ -24,21 +41,21 @@ TETHEX_NAMESPACE_OPEN
                  * @param x - the number in double format
                  * @param scientific - use scientific format (e.g. 1e-10), or not
                  * @param precision - if scientific format is used, we can change the precision
-                 * @return string
+                 * @return data in string format
                  */
 std::string d2s(double x, bool scientific = false, int precision = 6);
 
                 /**
                  * Convert integer data to string
                  * @param x - the integer number
-                 * @return string
+                 * @return data in string format
                  */
 std::string d2s(int x);
 
                 /**
                  * Convert unsigned integer data to string
                  * @param x - unsigned integer number
-                 * @return string
+                 * @return data in string format
                  */
 std::string d2s(unsigned int x);
 
@@ -48,6 +65,8 @@ std::string d2s(unsigned int x);
 //-------------------------------------------------------
 //
 // expect and require
+// (the idea was firstly discovered in deal.II sources,
+//  so thanks to its authors for that)
 //
 //-------------------------------------------------------
 #if DEBUG
@@ -87,7 +106,7 @@ void requirement_fails(const char *file,
 /**
  * Point in 3-dimensional space.
  * It's used for 2-dimensional triangles as well, and
- * in this case third coordinate is 0.
+ * in this case one of the coordinates is 0 (usually it's z-coordinate).
  */
 class Point
 {
@@ -99,18 +118,21 @@ public:
   static const unsigned int n_coord = 3;
 
                 /**
-                 * Constructor
+                 * Default constructor.
+                 * Coordinates are initialized by 0.
                  */
   Point();
 
                 /**
-                 * Constructor with parameter
+                 * Constructor with parameter.
+                 * Coordinates are initialized by array of numbers.
                  * @param coordinates - array of point coordinates
                  */
   Point(const double coordinates[]);
 
                 /**
-                 * Constructor with parameters
+                 * Constructor with parameters.
+                 * Coordinates are initialized by numbers.
                  * @param x_coord - x-coordinate of the point
                  * @param y_coord - y-coordinate of the point
                  * @param z_coord - z-coordinate of the point
@@ -142,11 +164,6 @@ public:
                  */
   void set_coord(unsigned int number, double value);
 
-//                /**
-//                 * Comparing two points
-//                 */
-//  bool operator ==(const Point &point) const;
-
 private:
                 /**
                  * Cartesian coordinates of the point
@@ -163,6 +180,13 @@ private:
 // MeshElement
 //
 //-------------------------------------------------------
+/**
+ * This class implements the most part of functionality of
+ * all elements of mesh: triangles, tetrahedra, quadrangles, hexahedra, etc.
+ * All these elements are declared as pointers to base (this) class.
+ * It's not an abstract class, because it has no pure virtual functions,
+ * but you can't create objects of this class, because its constructor is protected.
+ */
 class MeshElement
 {
 public:
@@ -193,8 +217,9 @@ public:
   unsigned int get_gmsh_el_type() const;
 
                 /**
-                 * Get the material ID of the element
-                 * @return The number that describes the physical domain to which the element belongs
+                 * Get the material ID of the element.
+                 * It's a number that describes the physical domain
+                 * to which the element belongs.
                  */
   unsigned int get_material_id() const;
 
@@ -222,14 +247,14 @@ public:
                 /**
                  * Set the number of vertex
                  * @param local_number - the number of vertex inside the element [0, n_vertices)
-                 * @param global_unmber - the number of vertex among other vertices of the mesh
+                 * @param global_number - the number of vertex among other vertices of the mesh
                  */
   void set_vertex(unsigned int local_number, unsigned int global_number);
 
                 /**
                  * Set the number of edge
                  * @param local_number - the number of edge inside the element [0, n_edges)
-                 * @param global_unmber - the number of edge among other edges of the mesh
+                 * @param global_number - the number of edge among other edges of the mesh
                  */
   void set_edge(unsigned int local_number, unsigned int global_number);
 
@@ -241,18 +266,14 @@ public:
   void set_face(unsigned int local_number, unsigned int global_number);
 
                 /**
-                 * Set all faces once
+                 * Set all faces once at time
                  * @param face_numbers - the numbers of all cell faces
                  */
-  void set_faces(std::vector<unsigned int> face_numbers);
-
-                /**
-                 * Add face to the list of faces
-                 */
-  void add_face(unsigned int face_number);
+  void set_faces(const std::vector<unsigned int> &face_numbers);
 
                 /**
                  * Check - whether the element contains the vertex or not
+                 * @param vertex - the number of vertex that we want to check
                  */
   bool contains(const unsigned int vertex) const;
 
@@ -304,7 +325,7 @@ protected:
                 /**
                  * Type of the element (its number actually) like in Gmsh.
                  * It must be defined in every derived class.
-                 * It's 0 be default.
+                 * It's 0 by default.
                  */
   unsigned int gmsh_el_type;
 
@@ -312,6 +333,7 @@ protected:
                  * Constructor is protected to prevent creating MeshElement objects directly
                  * @param n_ver - number of vertices
                  * @param n_edg - number of edges
+                 * @param n_fac - number of faces
                  * @param el_type - type of the element in Gmsh
                  */
   MeshElement(unsigned int n_ver = 0,
@@ -339,11 +361,10 @@ protected:
 //
 //-------------------------------------------------------
 /**
- * Line keeps 2 numbers - the number of beginning vertex
- * and the number of the ending one, and a number of physical domain
+ * Line keeps 3 numbers - the number of beginning vertex,
+ * the number of the ending one, and a number of physical domain
  * where this line takes place (material identificator - in other words).
- * Therefore, Line is like an Edge but vertices are not ordered, and
- * plus material_id exists.
+ * Line is not oriented.
  */
 class Line : public MeshElement
 {
@@ -391,18 +412,16 @@ public:
        const unsigned int v2,
        const unsigned int mat_id = 0);
 
-//                /**
-//                 * Comparing lines by their vertices
-//                 */
-//  bool operator ==(const Line &line) const;
-
                 /**
-                 * Find vertex common with another line
+                 * Find common vertex between two lines
+                 * @param line - second line for seeking common vertex
                  */
   unsigned int common_vertex(const Line& line) const;
 
                 /**
                  * Get another vertex (different from that we have)
+                 * @param vertex - we have the number of one vertex (this one),
+                 *                 and we want to find the number of another vertex
                  */
   unsigned int another_vertex(const unsigned int vertex) const;
 };
@@ -416,7 +435,11 @@ public:
 //
 //-------------------------------------------------------
 /**
- * Triangle - 2-dimensional simplex
+ * Triangle - 2-dimensional simplex.
+ * The simplest shape in 2D.
+ * It's an element of mesh,
+ * therefore it inherits the most part of
+ * functionality from MeshElement class.
  */
 class Triangle : public MeshElement
 {
@@ -432,7 +455,8 @@ public:
   static const unsigned int n_edges = 3;
 
                 /**
-                 * Triangle is 2D shape, so it's a face for tetrahedron
+                 * Triangle is 2D shape,
+                 * so it's a face itself (for tetrahedron)
                  */
   static const unsigned int n_faces = 1;
 
@@ -476,7 +500,11 @@ public:
 //
 //-------------------------------------------------------
 /**
- * Tetrahedron - 3-dimensional simplex
+ * Tetrahedron - 3-dimensional simplex.
+ * The simplest shape in 3D.
+ * It's an element of mesh,
+ * therefore it inherits the most part of
+ * functionality from MeshElement class.
  */
 class Tetrahedron : public MeshElement
 {
@@ -538,23 +566,27 @@ public:
 //
 //-------------------------------------------------------
 /**
- * Quadrangle - 2-dimensional shape with 4 straight edges
+ * Quadrangle - 2-dimensional shape with 4 straight edges.
+ * It's an element of mesh,
+ * therefore it inherits the most part of
+ * functionality from MeshElement class.
  */
 class Quadrangle : public MeshElement
 {
 public:
                 /**
-                 * the number of vertices of quadrangle
+                 * The number of vertices of quadrangle
                  */
   static const unsigned int n_vertices = 4;
 
                 /**
-                 * the number of edges of quadrangle
+                 * The number of edges of quadrangle
                  */
   static const unsigned int n_edges = 4;
 
                 /**
-                 * Quadrangle is 2D shape, so it's a face for hexahedron
+                 * Quadrangle is 2D shape,
+                 * so it's a face itself (for hexahedron)
                  */
   static const unsigned int n_faces = 1;
 
@@ -601,7 +633,10 @@ public:
 //
 //-------------------------------------------------------
 /**
- * Hexahedron - 3-dimensional shape with 6 plane faces
+ * Hexahedron - 3-dimensional shape with 6 plane faces.
+ * It's an element of mesh,
+ * therefore it inherits the most part of
+ * functionality from MeshElement class.
  */
 class Hexahedron : public MeshElement
 {
@@ -641,7 +676,8 @@ public:
 
                 /**
                  * Constructor with parameters
-                 * @param v1 - v8 - vertices of hexahedron
+                 * @param v1 - first vertex of hexahedron
+                 * @param v8 - 8-th vertex of hexahedron
                  * @param mat_id - material ID
                  */
   Hexahedron(const unsigned int v1,
@@ -658,9 +694,6 @@ public:
 
 
 
-
-
-
 //-------------------------------------------------------
 //
 // IncidenceMatrix
@@ -670,9 +703,13 @@ public:
 //class MeshElement;
 
 /**
- * Incidence matrix describes the relations (connections) between mesh nodes.
- * It's used for edge numerarion.
- * Because this matrix is symmetric we consider its lower triangle only.
+ * Incidence matrix describes the relations
+ * (connections) between mesh nodes.
+ * It's used for edge numeration and for fast
+ * finding of edge number knowing 2 vertices,
+ * that define the edge.
+ * Because this matrix is symmetric
+ * we consider its lower triangle only.
  */
 class IncidenceMatrix
 {
@@ -691,16 +728,20 @@ public:
   ~IncidenceMatrix();
 
                 /**
-                 * Find a serial number of the non zero element in the matrix
-                 * @param row_number - the number of row where we seek
-                 * @param col_number - the number of column where we seek
-                 * @return Serial number of the non zero element in the matrix
+                 * Find a serial number of the non zero element in the matrix.
+                 * This number usually coincides with the number of edge.
+                 * Since we keep only lower triangle of incidence matrix,
+                 * row_number has to be bigger than col_number.
+                 * @param row_number - the number of row where we seek (or one edge vertex)
+                 * @param col_number - the number of column where we seek (or another edge vertex)
+                 * @return Serial number of the non zero element in the matrix.
                  */
   unsigned int find(const unsigned int row_number,
                     const unsigned int col_number) const;
 
                 /**
-                 * Get the number of non zero elements in the matrix
+                 * Get the number of non zero elements in the matrix.
+                 * Can be used to know the number of mesh edges.
                  */
   unsigned int get_n_nonzero() const;
 
@@ -734,6 +775,9 @@ private:
 // Mesh
 //
 //-------------------------------------------------------
+/**
+ * Main class that stores all data during program execution.
+ */
 class Mesh
 {
 public:
@@ -754,12 +798,14 @@ public:
   void read(const std::string &file);
 
                 /**
-                 * Conversion from simplices to bricks
+                 * Conversion from simplices to bricks.
+                 * Specifically, in 2D - conversion from triangles to quadrangles,
+                 * in 3D - conversion from tetrahedra to hexahedra.
                  */
   void convert();
 
                 /**
-                 * Write the resulting brick mesh to file
+                 * Write the resulting brick mesh into the file
                  * @param file - the name of mesh file where we write the results of conversion
                  */
   void write(const std::string &file);
@@ -770,7 +816,7 @@ public:
   unsigned int get_n_vertices() const;
 
                 /**
-                 * Get the number of lines
+                 * Get the number of lines (physical lines)
                  */
   unsigned int get_n_lines() const;
 
@@ -805,14 +851,16 @@ public:
   unsigned int get_n_hexahedra() const;
 
                 /**
-                 * Print information about mesh
+                 * Print short information
+                 * about mesh into choosing stream.
                  */
-  void info(std::ostream &out) const;
+  void info(std::ostream &out = std::cout) const;
 
                 /**
-                 * Print some statistics about mesh
+                 * Print some statistics (detailed information)
+                 * about mesh into choosing stream.
                  */
-  void statistics(std::ostream &out) const;
+  void statistics(std::ostream &out = std::cout) const;
 
                 /**
                  * Get the copy of vertex
@@ -864,7 +912,7 @@ public:
 
 private:
                 /**
-                 * Mesh vertices (nodes)
+                 * Mesh vertices (nodes in terms of Gmsh)
                  */
   std::vector<Point> vertices;
 
@@ -920,7 +968,11 @@ private:
                        bool initialize_edges);
 
                 /**
-                 * Numerate the faces of simplices
+                 * Numerate the faces of simplices.
+                 * @param cells - triangles or tetrahedra
+                 * @param incidence_matrix - matrix of vertices incidence
+                 * @param edge_vertex_incidence - it's a structure of incidence between
+                 *                                edges and vertices opposite to them.
                  */
   void face_numeration(std::vector<MeshElement*> &cells,
                        const IncidenceMatrix &incidence_matrix,
@@ -938,8 +990,8 @@ private:
 
                 /**
                  * Find the global number of face basing on numbers of 2 edges defining that face
-                 * @param edge1 - one edge
-                 * @param edge2 - another edge
+                 * @param edge1 - one edge of the face
+                 * @param edge2 - another edge of the face
                  * @param vertices_incidence - incidence matrix between mesh vertices
                  * @param edge_vertex_incidence - incidence structure for vertices and opposite edges
                  */
@@ -948,19 +1000,61 @@ private:
                                         const IncidenceMatrix &vertices_incidence,
                                         const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence) const;
 
+                /**
+                 * During conversion we add new vertices -
+                 * at the centers of edges, triangles, tetrahedra.
+                 * This procedure unifies the approach to adding new vertices
+                 * @param elements - elements to which new vertices belong.
+                 *                   They may be edges, triangles or tetrahedra.
+                 * @param n_old_vertices - the number of original mesh vertices
+                 * @param shift - to make dense sequence of vertices we need to
+                 *                point out from what number new type of vertices starts
+                 */
   void set_new_vertices(const std::vector<MeshElement*> &elements,
                         const unsigned int n_old_vertices,
                         const unsigned int shift);
 
+                /**
+                 * Conversion from tetrahedra to hexahedra.
+                 * @param n_old_vertices - the number of original mesh vertices
+                 * @param incidence_matrix - the matrix of incidence between mesh nodes
+                 * @param edge_vertex_incidence - the structure of incidence between
+                 *                                mesh edges and vertices opposite to them
+                 */
   void convert_tetrahedra(const unsigned int n_old_vertices,
                           const IncidenceMatrix &incidence_matrix,
                           const std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence);
 
+                /**
+                 * Conversion from triangles to quadrangles.
+                 * It's called from 2 different places.
+                 * One call is held during 2D mesh conversion.
+                 * Another call - during 3D mesh conversion,
+                 * when we need to convert boundary triangles.
+                 * @param incidence_matrix - the matrix of incidence between mesh nodes
+                 * @param n_old_vertices - the number of original mesh vertices
+                 * @param numerate_edges - do we need to numerate edges of triangles, or not.
+                 *                         In 2D case we do it before this procedure,
+                 *                         so we don't need to do it again.
+                 *                         In 3D case edges of boundary triangles
+                 *                         are not numbered yet, therefore we must do it.
+                 * @param edge_vertex_incidence - the structure of incidence between
+                 *                                mesh edges and vertices opposite to them.
+                 *                                It used in 3D during boundary triangles conversion.
+                 */
   void convert_triangles(const IncidenceMatrix &incidence_matrix,
                          const unsigned int n_old_vertices,
                          bool numerate_edges,
                          const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence = std::vector<std::map<unsigned int, unsigned int> >());
 
+                /**
+                 * During mesh conversion we add new vertices.
+                 * They lie at the middle of all lines.
+                 * So original physical lines are not valid anymore,
+                 * and therefore we need to redefine them.
+                 * @param incidence_matrix - the matrix of incidence between mesh nodes
+                 * @param n_old_vertices - the number of original mesh vertices
+                 */
   void redefine_lines(const IncidenceMatrix &incidence_matrix,
                       const unsigned int n_old_vertices);
 };
@@ -973,16 +1067,40 @@ private:
 // Auxiliary functions
 //
 //-------------------------------------------------------
+                /**
+                 * Since this project was originally designed to connect Gmsh's meshes
+                 * with deal.II solvers, the main requirement for new meshes
+                 * was to be properly read by deal.II.
+                 * Therefore before creating quadrangle we check,
+                 * that it's correctly numerated. And we check it
+                 * like deal.II authors do - using cell_measure.
+                 * This procedure is taken from deal.II sources.
+                 */
 double cell_measure_2D(const std::vector<Point> &vertices,
                        const std::vector<unsigned int> &indices);
 
+                /**
+                 * Since this project was originally designed to connect Gmsh's meshes
+                 * with deal.II solvers, the main requirement for new meshes
+                 * was to be properly read by deal.II.
+                 * Therefore before creating hexahedron we check,
+                 * that it's correctly numerated. And we check it
+                 * like deal.II authors do - using cell_measure.
+                 * This procedure is taken from deal.II sources.
+                 */
 double cell_measure_3D(const std::vector<Point> &vertices,
                        const std::vector<unsigned int> &indices);
 
+                /**
+                 * Because all mesh elements are derived from one base MeshElement class,
+                 * we can use one procedure to treat the writing of all element into mesh file.
+                 * @param out - output stream
+                 * @param elems - vector of mesh elements
+                 * @param serial_number - serial number of mesh element in mesh file
+                 */
 void write_elements(std::ostream &out,
                     const std::vector<MeshElement*> &elems,
-                    unsigned int &k);
-
+                    unsigned int &serial_number);
 
 
 TETHEX_NAMESPACE_CLOSE

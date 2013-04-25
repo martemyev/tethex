@@ -1,8 +1,23 @@
+/*
+ * tethex - tetrahedra to hexahedra conversion
+ * Copyright (c) 2013 Mikhail Artemiev
+ *
+ * http://code.google.com/p/tethex
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #include "tethex.h"
 #include "config.h"
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 #include <cmath>
 
 TETHEX_NAMESPACE_OPEN
@@ -87,7 +102,6 @@ Point::Point(const double x_coord,
   if (n_coord > 2) coord[2] = z_coord;
 }
 
-
 Point::Point(const Point &p)
 {
   for (int i = 0; i < n_coord; ++i)
@@ -120,14 +134,6 @@ void Point::set_coord(unsigned int number, double value)
 
   coord[number] = value;
 }
-
-//bool Point::operator ==(const Point &point) const
-//{
-//  for (unsigned int i = 0; i < n_coord; ++i)
-//    if (fabs(coord[i] - point.coord[i]) > COMPARE_POINTS_TOLERANCE)
-//      return false; // points are different
-//  return true;
-//}
 
 
 
@@ -267,18 +273,12 @@ void MeshElement::set_face(unsigned int local_number, unsigned int global_number
   faces[local_number] = global_number;
 }
 
-void MeshElement::set_faces(std::vector<unsigned int> face_numbers)
+void MeshElement::set_faces(const std::vector<unsigned int> &face_numbers)
 {
   expect(face_numbers.size() == get_n_faces(),
          "Array of face numbers has another size (" + d2s(face_numbers.size()) +
          ") than it must be (" + d2s(get_n_faces()) + ")");
   faces = face_numbers;
-}
-
-void MeshElement::add_face(unsigned int face_number)
-{
-  if (find(faces.begin(), faces.end(), face_number) == faces.end())
-    faces.push_back(face_number);
 }
 
 bool MeshElement::contains(const unsigned int vertex) const
@@ -323,13 +323,6 @@ Line::Line(const unsigned int v1,
   vertices[1] = v2;
   material_id = mat_id;
 }
-
-//bool Line::operator ==(const Line &line) const
-//{
-//  return ((vertices[0] == line.vertices[0] && vertices[1] == line.vertices[1])
-//          ||
-//          (vertices[0] == line.vertices[1] && vertices[1] == line.vertices[0]));
-//}
 
 unsigned int Line::common_vertex(const Line& line) const
 {
@@ -636,8 +629,10 @@ void Mesh::clean()
   lines.clear();
   edges.clear();
   triangles.clear();
+  faces.clear();
   tetrahedra.clear();
   quadrangles.clear();
+  hexahedra.clear();
 }
 
 
@@ -987,13 +982,17 @@ void Mesh::convert_2D()
   convert_triangles(incidence_matrix, n_old_vertices, false);
 
   // now we don't need triangles anymore
-#if DELETE_SIMPLICES
+#if defined(DELETE_SIMPLICES)
   triangles.clear();
 #endif
 
   // after that we check boundary elements (lines),
   // because after adding new vertices they need to be redefined
   redefine_lines(incidence_matrix, n_old_vertices);
+
+#if !defined(TESTING)
+  edges.clear();
+#endif
 }
 
 
@@ -1047,7 +1046,7 @@ void Mesh::convert_3D()
   convert_tetrahedra(n_old_vertices, incidence_matrix, edge_vertex_incidence);
 
   // now we don't need tetrahedra anymore
-#if DELETE_SIMPLICES
+#if defined(DELETE_SIMPLICES)
   tetrahedra.clear();
 #endif
 
@@ -1056,13 +1055,18 @@ void Mesh::convert_3D()
   convert_triangles(incidence_matrix, n_old_vertices, true, edge_vertex_incidence);
 
   // now we don't need triangles anymore
-#if DELETE_SIMPLICES
+#if defined(DELETE_SIMPLICES)
   triangles.clear();
 #endif
 
   // after that we check lines (1D boundary elements),
   // because after adding new vertices they need to be redefined
   redefine_lines(incidence_matrix, n_old_vertices);
+
+#if !defined(TESTING)
+  edges.clear();
+  faces.clear();
+#endif
 
 }
 
@@ -1092,6 +1096,7 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
       }
       expect(seek_edges.size() == 3, "");
 
+      // numeration of hexahedron vertices
       hexahedron_vertices[0] = cur_vertex;
       hexahedron_vertices[1] = n_old_vertices + seek_edges[0];
       hexahedron_vertices[2] = n_old_vertices + edges.size() +
@@ -1109,7 +1114,7 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
 
       seek_edges.clear();
 
-      // check cell measure to be sure that we numerate all hexahedra in one way
+      // check cell measure to be sure that we numerate all hexahedra in one way.
       // this measure taken from deal.II.
 
       // convert the order of vertices to suitable for deal.II to check the cell measure
@@ -1120,7 +1125,7 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
         vertices_dealII_order[order_to_deal[i]] = hexahedron_vertices[i];
 
       if (cell_measure_3D(vertices, vertices_dealII_order) < 0)
-        // reorder vertices -  swap front and back faces
+        // reorder vertices - swap front and back faces
         for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
           std::swap(hexahedron_vertices[i], hexahedron_vertices[i + 4]);
 
@@ -1178,16 +1183,18 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
       expect(seek_edges.size() == 2,
              "The number of edges to which every vertex belongs must be equal to 2");
 
+      // numeration of quadrangle vertices
       quadrangle_vertices[0] = cur_vertex;
       quadrangle_vertices[1] = n_old_vertices + seek_edges[0];
       // !!! need to repair !!!
       if (numerate_edges) // distinguish 2D and 3D cases
       {
         // 3D case - boundary triangles
-        quadrangle_vertices[2] = n_old_vertices + edges.size() + find_face_from_two_edges(seek_edges[0],
-                                                                                          seek_edges[1],
-                                                                                          incidence_matrix,
-                                                                                          edge_vertex_incidence);
+        quadrangle_vertices[2] = n_old_vertices + edges.size() +
+                                 find_face_from_two_edges(seek_edges[0],
+                                                          seek_edges[1],
+                                                          incidence_matrix,
+                                                          edge_vertex_incidence);
       }
       else
       {
@@ -1406,6 +1413,8 @@ void Mesh::write(const std::string &file)
   out.close();
 }
 
+
+
 unsigned int Mesh::get_n_vertices() const
 {
   return vertices.size();
@@ -1446,65 +1455,7 @@ unsigned int Mesh::get_n_hexahedra() const
   return hexahedra.size();
 }
 
-void Mesh::info(std::ostream &out) const
-{
-  out << "\nvertices    : " << vertices.size()
-      << "\nedges       : " << edges.size()
-      << "\nlines       : " << lines.size()
-      << "\ntriangles   : " << triangles.size()
-      << "\nfaces       : " << faces.size()
-      << "\ntetrahedra  : " << tetrahedra.size()
-      << "\nquadrangles : " << quadrangles.size()
-      << "\nhexahedra   : " << hexahedra.size()
-      << "\n\n";
-}
 
-void Mesh::statistics(std::ostream &out) const
-{
-  out << "\nvertices:\n";
-  for (unsigned int i = 0; i < vertices.size(); ++i)
-  {
-    out << i << " ";
-    for (unsigned int j = 0; j < Point::n_coord; ++j)
-      out << vertices[i].get_coord(j) << " ";
-    out << "\n";
-  }
-
-  out << "\nedges:\n";
-  for (unsigned int i = 0; i < edges.size(); ++i)
-  {
-    out << i << " ";
-    for (unsigned int j = 0; j < Line::n_vertices; ++j)
-      out << edges[i]->get_vertex(j) << " ";
-    out << "\n";
-  }
-
-  out << "\ntets:\n";
-  for (unsigned int i = 0; i < tetrahedra.size(); ++i)
-  {
-    out << i << "  ";
-    for (unsigned int j = 0; j < Tetrahedron::n_vertices; ++j)
-      out << tetrahedra[i]->get_vertex(j) << " ";
-    out << " | ";
-    for (unsigned int j = 0; j < Tetrahedron::n_edges; ++j)
-      out << tetrahedra[i]->get_edge(j) << " ";
-    out << " | ";
-    for (unsigned int j = 0; j < Tetrahedron::n_faces; ++j)
-      out << tetrahedra[i]->get_face(j) << " ";
-    out << "\n";
-  }
-
-  out << "\nfaces:\n";
-  for (unsigned int i = 0; i < faces.size(); ++i)
-  {
-    out << i << " ";
-    for (unsigned int j = 0; j < faces[i]->get_n_vertices(); ++j)
-      out << faces[i]->get_vertex(j) << " ";
-    out << "\n";
-  }
-  out << "\n";
-
-}
 
 Point Mesh::get_vertex(const unsigned int number) const
 {
@@ -1572,6 +1523,69 @@ MeshElement& Mesh::get_hexahedron(const unsigned int number) const
 
 
 
+void Mesh::info(std::ostream &out) const
+{
+  out << "\nvertices    : " << vertices.size()
+      << "\nedges       : " << edges.size()
+      << "\nlines       : " << lines.size()
+      << "\ntriangles   : " << triangles.size()
+      << "\nfaces       : " << faces.size()
+      << "\ntetrahedra  : " << tetrahedra.size()
+      << "\nquadrangles : " << quadrangles.size()
+      << "\nhexahedra   : " << hexahedra.size()
+      << "\n\n";
+}
+
+
+
+void Mesh::statistics(std::ostream &out) const
+{
+  out << "\nvertices:\n";
+  for (unsigned int i = 0; i < vertices.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < Point::n_coord; ++j)
+      out << vertices[i].get_coord(j) << " ";
+    out << "\n";
+  }
+
+  out << "\nedges:\n";
+  for (unsigned int i = 0; i < edges.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < Line::n_vertices; ++j)
+      out << edges[i]->get_vertex(j) << " ";
+    out << "\n";
+  }
+
+  out << "\ntets:\n";
+  for (unsigned int i = 0; i < tetrahedra.size(); ++i)
+  {
+    out << i << "  ";
+    for (unsigned int j = 0; j < Tetrahedron::n_vertices; ++j)
+      out << tetrahedra[i]->get_vertex(j) << " ";
+    out << " | ";
+    for (unsigned int j = 0; j < Tetrahedron::n_edges; ++j)
+      out << tetrahedra[i]->get_edge(j) << " ";
+    out << " | ";
+    for (unsigned int j = 0; j < Tetrahedron::n_faces; ++j)
+      out << tetrahedra[i]->get_face(j) << " ";
+    out << "\n";
+  }
+
+  out << "\nfaces:\n";
+  for (unsigned int i = 0; i < faces.size(); ++i)
+  {
+    out << i << " ";
+    for (unsigned int j = 0; j < faces[i]->get_n_vertices(); ++j)
+      out << faces[i]->get_vertex(j) << " ";
+    out << "\n";
+  }
+  out << "\n";
+
+}
+
+
 
 unsigned int Mesh::find_face_from_two_edges(const unsigned int edge1,
                                             const unsigned int edge2,
@@ -1621,6 +1635,7 @@ void write_elements(std::ostream &out,
     out << "\n";
   }
 }
+
 
 
 double cell_measure_2D(const std::vector<Point> &vertices,
