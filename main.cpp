@@ -53,17 +53,21 @@ int main(int argc, char **argv)
   mesh.read(file_name);
   std::cout << "Reading " << file_name << " file is done" << std::endl;
 
-  mesh.info(std::cout);
+  mesh.info();
 //  mesh.statistics(std::cout);
 
   std::cout << "Converting simplices to bricks..." << std::endl;
   mesh.convert();
   std::cout << "Converting simplices to bricks is done" << std::endl;
 
-  mesh.info(std::cout);
+  mesh.info();
 //  mesh.statistics(std::cout);
 
-  std::string res_name = file_name.replace(pos, file_name.size(), "_hex.msh");
+  std::string res_name;
+  if (argc > 2)
+    res_name = std::string(argv[2]);
+  else
+    res_name = file_name.replace(pos, file_name.size(), "_hex.msh");
   std::cout << "Writing " << res_name << " file..." << std::endl;
   mesh.write(res_name);
   std::cout << "Writing " << res_name << " file is done" << std::endl;

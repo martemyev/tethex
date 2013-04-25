@@ -1231,8 +1231,8 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
 void Mesh::redefine_lines(const IncidenceMatrix &incidence_matrix,
                           const unsigned int n_old_vertices)
 {
-  const unsigned int n_lines = lines.size();
-  for (unsigned int line = 0; line < n_lines; ++line)
+  const unsigned int n_old_lines = lines.size();
+  for (unsigned int line = 0; line < n_old_lines; ++line)
   {
     // we need to find an edge that coincides with this line
     const unsigned int ver1 = lines[line]->get_vertex(0);
@@ -1245,6 +1245,11 @@ void Mesh::redefine_lines(const IncidenceMatrix &incidence_matrix,
     lines.push_back(new Line(n_old_vertices + edge, ver2,
                              lines[line]->get_material_id())); // add new line
   }
+
+  require(n_old_lines * 2 == lines.size(),
+          "The number of physical lines (" + d2s(lines.size()) +
+          " is not equal to number of original physical lines (" + d2s(n_old_lines) +
+          " multiplying by 2 (" + d2s(2 * n_old_lines) + ")");
 }
 
 
