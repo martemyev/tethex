@@ -354,6 +354,64 @@ protected:
 
 
 
+//-------------------------------------------------------
+//
+// PhysPoint (physical entity)
+//
+//-------------------------------------------------------
+/**
+ * PhysPoint keep 2 numbers - the number of the vertex associated with the point,
+ * and the number of physical domain
+ * where this point takes place (material identificator - in other words).
+ */
+class PhysPoint : public MeshElement
+{
+public:
+                /**
+                 * Point is a vertex itself
+                 */
+  static const unsigned int n_vertices = 1;
+
+                /**
+                 * It's 0-dimensional shape, and it's a boundary for edge
+                 */
+  static const unsigned int n_edges = 0;
+
+                /**
+                 * It has no faces
+                 */
+  static const unsigned int n_faces = 0;
+
+                /**
+                 * In Gmsh physical point is defined by number 15
+                 */
+  static const unsigned int gmsh_el_type = 15;
+
+                /**
+                 * Constructor
+                 */
+  PhysPoint();
+
+                /**
+                 * Constructor with parameters
+                 * @param ver - the list of vertices
+                 * @param mat_id - the material ID
+                 */
+  PhysPoint(const std::vector<unsigned int> &ver,
+            const unsigned int mat_id = 0);
+
+                /**
+                 * Constructor with parameters
+                 * @param ver - a vertex
+                 * @param mat_id - material ID
+                 */
+  PhysPoint(const unsigned int ver,
+            const unsigned int mat_id = 0);
+};
+
+
+
+
 
 //-------------------------------------------------------
 //
@@ -816,6 +874,11 @@ public:
   unsigned int get_n_vertices() const;
 
                 /**
+                 * Get the number of physical points
+                 */
+  unsigned int get_n_points() const;
+
+                /**
                  * Get the number of lines (physical lines)
                  */
   unsigned int get_n_lines() const;
@@ -869,6 +932,12 @@ public:
   Point get_vertex(const unsigned int number) const;
 
                 /**
+                 * Get the physical point
+                 * @param number - the number of point
+                 */
+  MeshElement& get_point(const unsigned int number) const;
+
+                /**
                  * Get the mesh edge
                  * @param number - the number of edge
                  */
@@ -915,6 +984,12 @@ private:
                  * Mesh vertices (nodes in terms of Gmsh)
                  */
   std::vector<Point> vertices;
+
+                /**
+                 * Physical points.
+                 *They are not treated - just copied into new mesh file.
+                 */
+  std::vector<MeshElement*> points;
 
                 /**
                  * Mesh lines - mean physical lines
@@ -1057,6 +1132,22 @@ private:
                  */
   void redefine_lines(const IncidenceMatrix &incidence_matrix,
                       const unsigned int n_old_vertices);
+
+                /**
+                 * Convert quadrangles into quadrangles.
+                 * It sounds odd, but there is a sense.
+                 * Gmsh's numeration of quadrangle vertices differs from deal.II's one.
+                 * We make quadrangle vertices numeration in such an order,
+                 * that it will be understandable by deal.II
+                 */
+  void convert_quadrangles();
+
+                /**
+                 * We do the same thing as convert_quadrangles does,
+                 * but in case of hexahedra.
+                 */
+  void convert_hexahedra();
+
 };
 
 
@@ -1101,6 +1192,17 @@ double cell_measure_3D(const std::vector<Point> &vertices,
 void write_elements(std::ostream &out,
                     const std::vector<MeshElement*> &elems,
                     unsigned int &serial_number);
+
+                /**
+                 * Change the order of vertices in such a way,
+                 * that it will be good for deal.II
+                 * @param dimension - dimension of the element (2D - quadrangle, 3D - hexahedron)
+                 * @param all_mesh_vertices - vertices of the mesh
+                 * @param vertices - vertices indices of the element, that we need to order
+                 */
+  void change_vertices_order(int dimension,
+                             const std::vector<Point> &all_mesh_vertices,
+                             std::vector<unsigned int> &vertices);
 
 
 TETHEX_NAMESPACE_CLOSE

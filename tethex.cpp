@@ -225,7 +225,7 @@ MeshElement& MeshElement::operator =(const MeshElement &elem)
   return *this;
 }
 
-inline unsigned int MeshElement::get_vertex(unsigned int number) const
+unsigned int MeshElement::get_vertex(unsigned int number) const
 {
   expect(number < n_vertices,
          "The local number of vertex is incorrect: " + d2s(number) +
@@ -233,7 +233,7 @@ inline unsigned int MeshElement::get_vertex(unsigned int number) const
   return vertices[number];
 }
 
-inline unsigned int MeshElement::get_edge(unsigned int number) const
+unsigned int MeshElement::get_edge(unsigned int number) const
 {
   expect(number < n_edges,
          "The local number of edge is incorrect: " + d2s(number) +
@@ -241,7 +241,7 @@ inline unsigned int MeshElement::get_edge(unsigned int number) const
   return edges[number];
 }
 
-inline unsigned int MeshElement::get_face(unsigned int number) const
+unsigned int MeshElement::get_face(unsigned int number) const
 {
   expect(number < n_faces,
          "The local number of face is incorrect: " + d2s(number) +
@@ -290,6 +290,35 @@ bool MeshElement::contains(const unsigned int vertex) const
 }
 
 
+
+
+//-------------------------------------------------------
+//
+// PhysPoint
+//
+//-------------------------------------------------------
+PhysPoint::PhysPoint()
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
+{ }
+
+PhysPoint::PhysPoint(const std::vector<unsigned int> &ver,
+                     const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
+{
+  expect(vertices.size() == ver.size(),
+         "The size of list of vertices (" + d2s(ver.size()) +
+         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+  vertices = ver;
+  material_id = mat_id;
+}
+
+PhysPoint::PhysPoint(const unsigned int ver,
+                     const unsigned int mat_id)
+  : MeshElement(n_vertices, n_edges, n_faces, gmsh_el_type)
+{
+  vertices[0] = ver;
+  material_id = mat_id;
+}
 
 
 
@@ -626,6 +655,7 @@ Mesh::~Mesh()
 void Mesh::clean()
 {
   vertices.clear();
+  points.clear();
   lines.clear();
   edges.clear();
   triangles.clear();
@@ -738,7 +768,9 @@ void Mesh::read(const std::string &file)
       std::map<unsigned int, unsigned int> type_nodes;
       type_nodes[1] = 2; // 2-nodes line
       type_nodes[2] = 3; // 3-nodes triangle
+      type_nodes[3] = 4; // 4-nodes quadrangle
       type_nodes[4] = 4; // 4-nodes tetrahedron
+      type_nodes[5] = 8; // 8-nodes hexahedron
       type_nodes[15]= 1; // 1-node point
 
       if (binary) // binary format
@@ -855,7 +887,7 @@ void Mesh::read(const std::string &file)
               type_nodes.find(el_type);
 
           require(el_type_iter != type_nodes.end(),
-                  "This type of the element (" + d2s(el_type) +
+                  "This type of the Gmsh's element (" + d2s(el_type) +
                   ") in the mesh file \"" + file + "\" is unknown!");
 
           const unsigned int n_elem_nodes = el_type_iter->second; // the number of nodes
@@ -871,6 +903,9 @@ void Mesh::read(const std::string &file)
           //MeshElement *new_element;
           switch (el_type)
           {
+          case 15: // 1-node point
+            points.push_back(new PhysPoint(nodes, phys_domain));
+            break;
           case 1: // 2-nodes line
             lines.push_back(new Line(nodes, phys_domain));
             //new_element = new Line(nodes, phys_domain);
@@ -879,13 +914,21 @@ void Mesh::read(const std::string &file)
             triangles.push_back(new Triangle(nodes, phys_domain));
             //new_element = new Triangle(nodes, phys_domain);
             break;
+          case 3: // 4-nodes quadrangle
+            quadrangles.push_back(new Quadrangle(nodes, phys_domain));
+            //new_element = new Quadrangle(nodes, phys_domain);
+            break;
           case 4: //4-nodes tetrahedron
             tetrahedra.push_back(new Tetrahedron(nodes, phys_domain));
             //new_element = new Tetrahedron(nodes, phys_domain);
             break;
+          case 5: // 8-nodes hexahedron
+            hexahedra.push_back(new Hexahedron(nodes, phys_domain));
+            //new_element = new Hexahedron(nodes, phys_domain);
+            break;
           default:
             require(false,
-                    "Unknown type of the element (" + d2s(el_type) +
+                    "Unknown type of the Gmsh's element (" + d2s(el_type) +
                     ") in the file " + file + "!");
           }
 
@@ -897,14 +940,21 @@ void Mesh::read(const std::string &file)
 
         // check some expectations
         expect(number == n_elements,
-               "The number of the last read element (" + d2s(number) +\
+               "The number of the last read Gmsh's element (" + d2s(number) +\
                ") is not equal to the amount of all elements in the mesh (" + d2s(n_elements) + ")!");
 
       } // ASCII format
 
-      // expectations after reading elements
-      expect(!lines.empty() || !triangles.empty() || !tetrahedra.empty(),
-             "There is no elements in the mesh!");
+      // requirements after reading elements
+      require(!triangles.empty() || !tetrahedra.empty() ||
+              !quadrangles.empty() || !hexahedra.empty(),
+             "There are no any 2D or 3D elements in the mesh!");
+
+      // we prevent mixing of simplices and bricks in one mesh.
+      // at least for the moment
+      if (!triangles.empty() || !tetrahedra.empty())
+        require(quadrangles.empty() && hexahedra.empty(),
+                "There are simplices and bricks in the same mesh. It's prohibited. Mesh file " + file);
 
     } // read the elements
   }
@@ -917,11 +967,15 @@ void Mesh::read(const std::string &file)
 
 void Mesh::convert()
 {
-  // we need to distinguish 2D and 3D
-  if (tetrahedra.empty())
-    convert_2D();
-  else
+  if (!tetrahedra.empty())
     convert_3D();
+  else if (!triangles.empty())
+    convert_2D();
+
+  if (!hexahedra.empty())
+    convert_hexahedra();
+  if (!quadrangles.empty())
+    convert_quadrangles();
 }
 
 
@@ -1116,18 +1170,19 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
 
       // check cell measure to be sure that we numerate all hexahedra in one way.
       // this measure taken from deal.II.
+      change_vertices_order(3, vertices, hexahedron_vertices);
 
-      // convert the order of vertices to suitable for deal.II to check the cell measure
-      std::vector<unsigned int> vertices_dealII_order(Hexahedron::n_vertices);
-      unsigned int order_to_deal[] = { 0, 1, 5, 4, 2, 3, 7, 6 };
+//      // convert the order of vertices to suitable for deal.II to check the cell measure
+//      std::vector<unsigned int> vertices_dealII_order(Hexahedron::n_vertices);
+//      unsigned int order_to_deal[] = { 0, 1, 5, 4, 2, 3, 7, 6 };
 
-      for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
-        vertices_dealII_order[order_to_deal[i]] = hexahedron_vertices[i];
+//      for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
+//        vertices_dealII_order[order_to_deal[i]] = hexahedron_vertices[i];
 
-      if (cell_measure_3D(vertices, vertices_dealII_order) < 0)
-        // reorder vertices - swap front and back faces
-        for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
-          std::swap(hexahedron_vertices[i], hexahedron_vertices[i + 4]);
+//      if (cell_measure_3D(vertices, vertices_dealII_order) < 0)
+//        // reorder vertices - swap front and back faces
+//        for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
+//          std::swap(hexahedron_vertices[i], hexahedron_vertices[i + 4]);
 
       // now generate hexahedron
       hexahedra.push_back(new Hexahedron(hexahedron_vertices,
@@ -1208,10 +1263,12 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
       // though the order of vertices is right, it may be clockwise or counterclockwise,
       // and it's important not to mix these 2 directions.
       // so, we need additional check as deal.II authors do.
-      // taken from deal.II
-      if (cell_measure_2D(vertices, quadrangle_vertices) < 0)
-        // change 2 vertices to reverse the order
-        std::swap(quadrangle_vertices[1], quadrangle_vertices[3]);
+      change_vertices_order(2, vertices, quadrangle_vertices);
+
+//      // taken from deal.II
+//      if (cell_measure_2D(vertices, quadrangle_vertices) < 0)
+//        // change 2 vertices to reverse the order
+//        std::swap(quadrangle_vertices[1], quadrangle_vertices[3]);
 
       // now we are ready to generate quadrangle
       quadrangles.push_back(new Quadrangle(quadrangle_vertices, triangles[tri]->get_material_id()));
@@ -1223,6 +1280,56 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
           "The number of quadrangles (" + d2s(quadrangles.size()) +
           " is not equal to number of triangles (" + d2s(triangles.size()) +
           " multiplying by 3 (" + d2s(3 * triangles.size()) + ")");
+}
+
+
+
+
+void Mesh::convert_quadrangles()
+{
+  unsigned int n_converted_quads = 0;
+  for (unsigned int elem = 0; elem < quadrangles.size(); ++elem)
+  {
+    std::vector<unsigned int> quad_vertices(Quadrangle::n_vertices);
+    for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
+      quad_vertices[i] = quadrangles[elem]->get_vertex(i);
+
+#if defined(TESTING)
+    const unsigned ver = quad_vertices[1];
+#endif
+
+    change_vertices_order(2, vertices, quad_vertices);
+
+#if defined(TESTING)
+    if (quad_vertices[1] != ver)
+      ++n_converted_quads;
+#endif
+
+    for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
+      quadrangles[elem]->set_vertex(i, quad_vertices[i]);
+  }
+//#if defined(TESTING)
+//  std::cout << "the number of converted quadrangles : " << n_converted_quads << std::endl;
+//#endif
+}
+
+
+
+
+
+void Mesh::convert_hexahedra()
+{
+  for (unsigned int elem = 0; elem < hexahedra.size(); ++elem)
+  {
+    std::vector<unsigned int> hexahedron_vertices(Hexahedron::n_vertices);
+    for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
+      hexahedron_vertices[i] = hexahedra[elem]->get_vertex(i);
+
+    change_vertices_order(3, vertices, hexahedron_vertices);
+
+    for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
+      hexahedra[elem]->set_vertex(i, hexahedron_vertices[i]);
+  }
 }
 
 
@@ -1389,6 +1496,9 @@ void Mesh::write(const std::string &file)
   std::ofstream out(file.c_str());
   require(out, "File " + file + " cannot be opened for writing!");
 
+  out.setf(std::ios::scientific);
+  out.precision(16);
+
   out << "$MeshFormat\n2.2 0 8\n$EndMeshFormat\n$Nodes\n" << vertices.size() << "\n";
   for (unsigned int ver = 0; ver < vertices.size(); ++ver)
   {
@@ -1398,7 +1508,8 @@ void Mesh::write(const std::string &file)
     out << "\n";
   }
 
-  const unsigned int n_all_elements = lines.size() +
+  const unsigned int n_all_elements = points.size() +
+                                      lines.size() +
                                       triangles.size() +
                                       tetrahedra.size() +
                                       quadrangles.size() +
@@ -1407,6 +1518,7 @@ void Mesh::write(const std::string &file)
 
   unsigned int serial_number = 0;
 
+  write_elements(out, points, serial_number);
   write_elements(out, lines, serial_number);
   write_elements(out, triangles, serial_number);
   write_elements(out, tetrahedra, serial_number);
@@ -1423,6 +1535,11 @@ void Mesh::write(const std::string &file)
 unsigned int Mesh::get_n_vertices() const
 {
   return vertices.size();
+}
+
+unsigned int Mesh::get_n_points() const
+{
+  return points.size();
 }
 
 unsigned int Mesh::get_n_lines() const
@@ -1468,6 +1585,14 @@ Point Mesh::get_vertex(const unsigned int number) const
          "The required number (" + d2s(number) +
          " is bigger than the number of vertices (" + d2s(vertices.size()) + ")");
   return vertices[number];
+}
+
+MeshElement& Mesh::get_point(const unsigned int number) const
+{
+  expect(number < points.size(),
+         "The required number (" + d2s(number) +
+         " is bigger than the number of physical points (" + d2s(points.size()) + ")");
+  return *(points[number]);
 }
 
 MeshElement& Mesh::get_edge(const unsigned int number) const
@@ -1530,14 +1655,15 @@ MeshElement& Mesh::get_hexahedron(const unsigned int number) const
 
 void Mesh::info(std::ostream &out) const
 {
-  out << "\nvertices    : " << vertices.size()
-      << "\nedges       : " << edges.size()
-      << "\nlines       : " << lines.size()
-      << "\ntriangles   : " << triangles.size()
-      << "\nfaces       : " << faces.size()
-      << "\ntetrahedra  : " << tetrahedra.size()
-      << "\nquadrangles : " << quadrangles.size()
-      << "\nhexahedra   : " << hexahedra.size()
+  out << "\nvertices      : " << vertices.size()
+      << "\npoints (phys) : " << points.size()
+      << "\nedges         : " << edges.size()
+      << "\nlines         : " << lines.size()
+      << "\ntriangles     : " << triangles.size()
+      << "\nfaces         : " << faces.size()
+      << "\ntetrahedra    : " << tetrahedra.size()
+      << "\nquadrangles   : " << quadrangles.size()
+      << "\nhexahedra     : " << hexahedra.size()
       << "\n\n";
 }
 
@@ -1640,6 +1766,45 @@ void write_elements(std::ostream &out,
     out << "\n";
   }
 }
+
+
+
+
+void change_vertices_order(int dimension,
+                           const std::vector<Point> &all_mesh_vertices,
+                           std::vector<unsigned int> &vertices)
+{
+  if (dimension == 2)
+  {
+    // convert the order of vertices to suitable for deal.II to check the cell measure
+    std::vector<unsigned int> vertices_dealII_order(Quadrangle::n_vertices);
+    unsigned int order_to_deal[] = { 0, 1, 3, 2 };
+
+    for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
+      vertices_dealII_order[order_to_deal[i]] = vertices[i];
+
+    if (cell_measure_2D(all_mesh_vertices, vertices_dealII_order) < 0)
+      // reorder vertices - swap first and third vertices
+      std::swap(vertices[1], vertices[3]);
+  }
+  else if (dimension == 3)
+  {
+    // convert the order of vertices to suitable for deal.II to check the cell measure
+    std::vector<unsigned int> vertices_dealII_order(Hexahedron::n_vertices);
+    unsigned int order_to_deal[] = { 0, 1, 5, 4, 2, 3, 7, 6 };
+
+    for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
+      vertices_dealII_order[order_to_deal[i]] = vertices[i];
+
+    if (cell_measure_3D(all_mesh_vertices, vertices_dealII_order) < 0)
+      // reorder vertices - swap front and back faces
+      for (unsigned int i = 0; i < 4; ++i)
+        std::swap(vertices[i], vertices[i + 4]);
+  }
+  else
+    require(false, "This feature is not implemented!");
+}
+
 
 
 

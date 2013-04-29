@@ -18,6 +18,7 @@
 #include "config.h"
 #include <iostream>
 #include <cstdlib>
+#include <ctime>
 #if defined(TESTING)
   #include "testing.h"
 #endif
@@ -48,6 +49,9 @@ int main(int argc, char **argv)
           "Input file " + file_name +
           " is not native Gmsh's mesh file. Its extension is not .msh");
 
+  // time measurement
+  clock_t beg_time = clock();
+
   Mesh mesh;
   std::cout << "Reading " << file_name << " file..." << std::endl;
   mesh.read(file_name);
@@ -71,6 +75,10 @@ int main(int argc, char **argv)
   std::cout << "Writing " << res_name << " file..." << std::endl;
   mesh.write(res_name);
   std::cout << "Writing " << res_name << " file is done" << std::endl;
+
+  // time measurement
+  clock_t total_time = clock() - beg_time;
+  std::cout << "\nTime of execution is " << (double)total_time / CLOCKS_PER_SEC << " sec " << std::endl;
 
   return 0;
 }

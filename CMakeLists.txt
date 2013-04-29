@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type of the project (Debug, Release)")
 
 
 # --- some definitions ---
@@ -15,7 +15,7 @@ project(tethex)
 # --- set version ---
 set(TETHEX_VERSION_MAJOR 0)
 set(TETHEX_VERSION_MINOR 0)
-set(TETHEX_VERSION_PATCH 1)
+set(TETHEX_VERSION_PATCH 2)
 
 
 # --- useful variables ---
@@ -23,10 +23,16 @@ set(TETHEX_VERSION_PATCH 1)
 #set(DELETE_SIMPLICES 0 CACHE BOOL "Delete simplices after converting them into bricks (to economize some memory)")
 option(TESTING "Do you want to launch testing procedure before using the program?" OFF)
 option(DELETE_SIMPLICES "Delete simplices after converting them into bricks (to economize some memory)" ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
 
 
 # --- write the variables initialized here to config.h file ---
-message("Options: TESTING = ${TESTING}, DELETE_SIMPLICES = ${DELETE_SIMPLICES}")
+message("Options:")
+message("  CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+message("  TESTING = ${TESTING}")
+message("  DELETE_SIMPLICES = ${DELETE_SIMPLICES}")
 configure_file(
   "${PROJECT_SOURCE_DIR}/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h")
