@@ -48,11 +48,19 @@ inline std::string d2s(int x)
   return o.str();
 }
 
-inline std::string d2s(unsigned int x)
+//inline std::string d2s(unsigned int x)
+//{
+//  std::ostringstream o;
+//  if (!(o << x))
+//    throw std::runtime_error("Bad conversion from unsigned int to string!");
+//  return o.str();
+//}
+
+inline std::string d2s(size_t x)
 {
   std::ostringstream o;
   if (!(o << x))
-    throw std::runtime_error("Bad conversion from unsigned int to string!");
+    throw std::runtime_error("Bad conversion from size_t to string!");
   return o.str();
 }
 
@@ -1068,7 +1076,7 @@ void Mesh::convert_3D()
   // the key - number of vertex, opposite to the suitable edge,
   // the value - number of suitable face, defining by edge and vertex
   // opposite to edge
-  std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence(edges.size());
+  VectorMap edge_vertex_incidence(edges.size());
 
   // after that - face numeration
   face_numeration(tetrahedra, incidence_matrix, edge_vertex_incidence);
@@ -1129,7 +1137,7 @@ void Mesh::convert_3D()
 
 void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
                               const IncidenceMatrix &incidence_matrix,
-                              const std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence)
+                              const VectorMap edge_vertex_incidence)
 {
   std::vector<unsigned int> hexahedron_vertices(Hexahedron::n_vertices);
 
@@ -1203,7 +1211,7 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
 void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
                              const unsigned int n_old_vertices,
                              bool numerate_edges,
-                             const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence)
+                             const VectorMap &edge_vertex_incidence)
 {
   // quadrangles generation
   std::vector<unsigned int> quadrangle_vertices(Quadrangle::n_vertices);
@@ -1414,7 +1422,7 @@ void Mesh::edge_numeration(std::vector<MeshElement*> &cells,
 
 void Mesh::face_numeration(std::vector<MeshElement*> &cells,
                            const IncidenceMatrix &incidence_matrix,
-                           std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence)
+                           VectorMap &edge_vertex_incidence)
 {
   unsigned int n_faces = 0; // the number of all faces and the number of current face
 
@@ -1721,7 +1729,7 @@ void Mesh::statistics(std::ostream &out) const
 unsigned int Mesh::find_face_from_two_edges(const unsigned int edge1,
                                             const unsigned int edge2,
                                             const IncidenceMatrix &vertices_incidence,
-                                            const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence) const
+                                            const VectorMap &edge_vertex_incidence) const
 {
   // initialize auxiliary lines
   Line line1(edges[edge1]->get_vertex(0), edges[edge1]->get_vertex(1), edges[edge1]->get_material_id());

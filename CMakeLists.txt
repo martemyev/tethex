@@ -15,7 +15,7 @@ project(tethex)
 # --- set version ---
 set(TETHEX_VERSION_MAJOR 0)
 set(TETHEX_VERSION_MINOR 0)
-set(TETHEX_VERSION_PATCH 2)
+set(TETHEX_VERSION_PATCH 3)
 
 
 # --- useful variables ---

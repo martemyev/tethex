@@ -52,12 +52,19 @@ std::string d2s(double x, bool scientific = false, int precision = 6);
                  */
 std::string d2s(int x);
 
+//                /**
+//                 * Convert unsigned integer data to string
+//                 * @param x - unsigned integer number
+//                 * @return data in string format
+//                 */
+//std::string d2s(unsigned int x);
+
                 /**
-                 * Convert unsigned integer data to string
-                 * @param x - unsigned integer number
+                 * Convert size_t data to string
+                 * @param x - size_t number
                  * @return data in string format
                  */
-std::string d2s(unsigned int x);
+std::string d2s(size_t x);
 
 
 
@@ -1026,6 +1033,8 @@ private:
                  */
   std::vector<MeshElement*> hexahedra;
 
+  typedef std::vector<std::map<unsigned int, unsigned int> > VectorMap;
+
                 /**
                  * Free the memory to read again, for example
                  */
@@ -1051,7 +1060,7 @@ private:
                  */
   void face_numeration(std::vector<MeshElement*> &cells,
                        const IncidenceMatrix &incidence_matrix,
-                       std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence);
+                       VectorMap &edge_vertex_incidence);
 
                 /**
                  * Conversion of 2D meshes (triangles -> quadrangles)
@@ -1073,7 +1082,7 @@ private:
   unsigned int find_face_from_two_edges(const unsigned int edge1,
                                         const unsigned int edge2,
                                         const IncidenceMatrix &vertices_incidence,
-                                        const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence) const;
+                                        const VectorMap &edge_vertex_incidence) const;
 
                 /**
                  * During conversion we add new vertices -
@@ -1098,7 +1107,7 @@ private:
                  */
   void convert_tetrahedra(const unsigned int n_old_vertices,
                           const IncidenceMatrix &incidence_matrix,
-                          const std::vector<std::map<unsigned int, unsigned int> > edge_vertex_incidence);
+                          const VectorMap edge_vertex_incidence);
 
                 /**
                  * Conversion from triangles to quadrangles.
@@ -1120,7 +1129,7 @@ private:
   void convert_triangles(const IncidenceMatrix &incidence_matrix,
                          const unsigned int n_old_vertices,
                          bool numerate_edges,
-                         const std::vector<std::map<unsigned int, unsigned int> > &edge_vertex_incidence = std::vector<std::map<unsigned int, unsigned int> >());
+                         const VectorMap &edge_vertex_incidence = VectorMap());
 
                 /**
                  * During mesh conversion we add new vertices.
