@@ -48,14 +48,15 @@ inline std::string d2s(int x)
   return o.str();
 }
 
-//inline std::string d2s(unsigned int x)
-//{
-//  std::ostringstream o;
-//  if (!(o << x))
-//    throw std::runtime_error("Bad conversion from unsigned int to string!");
-//  return o.str();
-//}
+inline std::string d2s(unsigned int x)
+{
+  std::ostringstream o;
+  if (!(o << x))
+    throw std::runtime_error("Bad conversion from unsigned int to string!");
+  return o.str();
+}
 
+#if defined(HAVE_64BIT_SIZE_T)
 inline std::string d2s(size_t x)
 {
   std::ostringstream o;
@@ -63,6 +64,8 @@ inline std::string d2s(size_t x)
     throw std::runtime_error("Bad conversion from size_t to string!");
   return o.str();
 }
+#endif
+
 
 
 

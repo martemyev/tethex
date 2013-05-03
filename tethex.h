@@ -52,19 +52,21 @@ std::string d2s(double x, bool scientific = false, int precision = 6);
                  */
 std::string d2s(int x);
 
-//                /**
-//                 * Convert unsigned integer data to string
-//                 * @param x - unsigned integer number
-//                 * @return data in string format
-//                 */
-//std::string d2s(unsigned int x);
+                /**
+                 * Convert unsigned integer data to string
+                 * @param x - unsigned integer number
+                 * @return data in string format
+                 */
+std::string d2s(unsigned int x);
 
                 /**
                  * Convert size_t data to string
                  * @param x - size_t number
                  * @return data in string format
                  */
+#if defined(HAVE_64BIT_SIZE_T)
 std::string d2s(size_t x);
+#endif
 
 
 

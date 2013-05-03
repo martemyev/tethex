@@ -19,5 +19,6 @@
 
 #cmakedefine TESTING
 #cmakedefine DELETE_SIMPLICES
+#cmakedefine HAVE_64BIT_SIZE_T
 
 #endif // TETHEX_CONFIG_H_IN

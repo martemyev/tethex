@@ -18,21 +18,28 @@ set(TETHEX_VERSION_MINOR 0)
 set(TETHEX_VERSION_PATCH 3)
 
 
-# --- useful variables ---
-#set(TESTING 1 CACHE BOOL "Do you want to launch testing procedure before using the program?")
-#set(DELETE_SIMPLICES 0 CACHE BOOL "Delete simplices after converting them into bricks (to economize some memory)")
+# --- useful variables and options ---
 option(TESTING "Do you want to launch testing procedure before using the program?" OFF)
 option(DELETE_SIMPLICES "Delete simplices after converting them into bricks (to economize some memory)" ON)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
+set(HAVE_64BIT_SIZE_T OFF CACHE INTERNAL "")
+include(CheckTypeSize)
+check_type_size("void*" SIZEOF_VOID_P)
+if(SIZEOF_VOID_P EQUAL 8)
+  set(HAVE_64BIT_SIZE_T ON CACHE INTERNAL "")
+endif(SIZEOF_VOID_P EQUAL 8)
+
 
 # --- write the variables initialized here to config.h file ---
 message("Options:")
-message("  CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
-message("  TESTING = ${TESTING}")
-message("  DELETE_SIMPLICES = ${DELETE_SIMPLICES}")
+message("  CMAKE_BUILD_TYPE  = ${CMAKE_BUILD_TYPE}")
+message("  TESTING           = ${TESTING}")
+message("  DELETE_SIMPLICES  = ${DELETE_SIMPLICES}")
+message("  HAVE_64BIT_SIZE_T = ${HAVE_64BIT_SIZE_T}")
 configure_file(
   "${PROJECT_SOURCE_DIR}/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h")
@@ -71,7 +78,7 @@ set(CPACK_PACKAGE_VERSION_MINOR "${TETHEX_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${TETHEX_VERSION_PATCH}")
 # -- make package_source --
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_IGNORE_FILES "./*.user;build;doc;.git;.gitignore")
+set(CPACK_SOURCE_IGNORE_FILES "./*.user;build;doc;.git;.gitignore;dont_remove")
 include(CPack)
 
 
