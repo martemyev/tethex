@@ -687,10 +687,10 @@ void Mesh::read(const std::string &file)
   clean(); // free the memory for mesh elements
 
   std::string str;
-  getline(in, str); // the first string of Gmsh file is "$MeshFormat"
+  in >> str; // the first string of Gmsh file is "$MeshFormat"
   expect(str == "$MeshFormat",
          "The first string of the Gmsh file " + file +
-         " doesn't equal to \"$MeshFormat\". The actual string is " + str);
+         " doesn't equal to \"$MeshFormat\". The actual string is \"" + str + "\"");
 
   // read the information about the mesh
   double version;
@@ -725,7 +725,7 @@ void Mesh::read(const std::string &file)
 
   // read lines of mesh file.
   // if we face specific keyword, we'll treat the section.
-  while (getline(in, str))
+  while (in >> str)
   {
     if (str == "$Nodes") // read the mesh vertices
     {
