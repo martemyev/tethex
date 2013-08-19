@@ -1194,7 +1194,7 @@ double cell_measure_3D(const std::vector<Point> &vertices,
                        const std::vector<unsigned int> &indices);
 
                 /**
-                 * Because all mesh elements are derived from one base MeshElement class,
+                 * Since all mesh elements are derived from one base MeshElement class,
                  * we can use one procedure to treat the writing of all element into mesh file.
                  * @param out - output stream
                  * @param elems - vector of mesh elements

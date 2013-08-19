@@ -92,3 +92,8 @@ if(DOXYGEN_FOUND)
 else(DOXYGEN_FOUND)
   message("WARNING: Doxygen is not found - Autodocumentation will not be created")
 endif(DOXYGEN_FOUND)
+
+
+# --- ctest and cdash ---
+include(CTest)
+
