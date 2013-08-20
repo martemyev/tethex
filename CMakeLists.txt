@@ -18,7 +18,7 @@ project(tethex)
 # --- set version ---
 set(TETHEX_VERSION_MAJOR 0)
 set(TETHEX_VERSION_MINOR 0)
-set(TETHEX_VERSION_PATCH 4)
+set(TETHEX_VERSION_PATCH 5)
 
 
 # --- useful variables and options ---
@@ -97,7 +97,7 @@ set(CPACK_PACKAGE_VERSION_MINOR "${TETHEX_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${TETHEX_VERSION_PATCH}")
 # -- make package_source --
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_IGNORE_FILES "./*.user;build;doc;.git;.gitignore;dont_remove")
+set(CPACK_SOURCE_IGNORE_FILES "./*.user;build;doc;.git;.gitignore;dont_remove;CTestConfig.cmake")
 include(CPack)
 
 
