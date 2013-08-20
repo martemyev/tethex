@@ -318,7 +318,7 @@ PhysPoint::PhysPoint(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -349,7 +349,7 @@ Line::Line(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -404,7 +404,7 @@ Triangle::Triangle(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -440,7 +440,7 @@ Tetrahedron::Tetrahedron(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -478,7 +478,7 @@ Quadrangle::Quadrangle(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -516,7 +516,7 @@ Hexahedron::Hexahedron(const std::vector<unsigned int> &ver,
 {
   expect(vertices.size() == ver.size(),
          "The size of list of vertices (" + d2s(ver.size()) +
-         "is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
+         ") is not equal to really needed number of vertices (" + d2s(n_vertices) + ")");
   vertices = ver;
   material_id = mat_id;
 }
@@ -553,7 +553,7 @@ Hexahedron::Hexahedron(const unsigned int v1,
 //
 //-------------------------------------------------------
 IncidenceMatrix::IncidenceMatrix(const unsigned int n_vertices,
-                                 const std::vector<MeshElement*> &cells)
+                                 const std::vector<MeshElement_ptr> &cells)
   : dim(n_vertices)
 {
   std::vector<unsigned int> *vec = new std::vector<unsigned int>[dim]; // for lower triangle
@@ -915,26 +915,26 @@ void Mesh::read(const std::string &file)
           switch (el_type)
           {
           case 15: // 1-node point
-            points.push_back(new PhysPoint(nodes, phys_domain));
+            points.push_back(MeshElement_ptr(new PhysPoint(nodes, phys_domain)));
             break;
           case 1: // 2-nodes line
-            lines.push_back(new Line(nodes, phys_domain));
+            lines.push_back(MeshElement_ptr(new Line(nodes, phys_domain)));
             //new_element = new Line(nodes, phys_domain);
             break;
           case 2: // 3-nodes triangle
-            triangles.push_back(new Triangle(nodes, phys_domain));
+            triangles.push_back(MeshElement_ptr(new Triangle(nodes, phys_domain)));
             //new_element = new Triangle(nodes, phys_domain);
             break;
           case 3: // 4-nodes quadrangle
-            quadrangles.push_back(new Quadrangle(nodes, phys_domain));
+            quadrangles.push_back(MeshElement_ptr(new Quadrangle(nodes, phys_domain)));
             //new_element = new Quadrangle(nodes, phys_domain);
             break;
           case 4: //4-nodes tetrahedron
-            tetrahedra.push_back(new Tetrahedron(nodes, phys_domain));
+            tetrahedra.push_back(MeshElement_ptr(new Tetrahedron(nodes, phys_domain)));
             //new_element = new Tetrahedron(nodes, phys_domain);
             break;
           case 5: // 8-nodes hexahedron
-            hexahedra.push_back(new Hexahedron(nodes, phys_domain));
+            hexahedra.push_back(MeshElement_ptr(new Hexahedron(nodes, phys_domain)));
             //new_element = new Hexahedron(nodes, phys_domain);
             break;
           default:
@@ -991,7 +991,7 @@ void Mesh::convert()
 
 
 
-void Mesh::set_new_vertices(const std::vector<MeshElement*> &elements,
+void Mesh::set_new_vertices(const std::vector<MeshElement_ptr> &elements,
                             const unsigned int n_old_vertices,
                             const unsigned int shift)
 {
@@ -1196,16 +1196,16 @@ void Mesh::convert_tetrahedra(const unsigned int n_old_vertices,
 //          std::swap(hexahedron_vertices[i], hexahedron_vertices[i + 4]);
 
       // now generate hexahedron
-      hexahedra.push_back(new Hexahedron(hexahedron_vertices,
-                                         tetrahedra[tet]->get_material_id()));
+      hexahedra.push_back(MeshElement_ptr(new Hexahedron(hexahedron_vertices,
+                                                         tetrahedra[tet]->get_material_id())));
 
     } // vertices
   } // tetrahedra
 
   require(tetrahedra.size() * 4 == hexahedra.size(),
           "The number of hexahedra (" + d2s(hexahedra.size()) +
-          " is not equal to number of tetrahedra (" + d2s(tetrahedra.size()) +
-          " multiplying by 3 (" + d2s(3 * tetrahedra.size()) + ")");
+          ") is not equal to number of tetrahedra (" + d2s(tetrahedra.size()) +
+          ") multiplying by 3 (" + d2s(3 * tetrahedra.size()) + ")");
 }
 
 
@@ -1282,15 +1282,16 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
 //        std::swap(quadrangle_vertices[1], quadrangle_vertices[3]);
 
       // now we are ready to generate quadrangle
-      quadrangles.push_back(new Quadrangle(quadrangle_vertices, triangles[tri]->get_material_id()));
+      quadrangles.push_back(MeshElement_ptr(new Quadrangle(quadrangle_vertices,
+                                                           triangles[tri]->get_material_id())));
 
     } // for every vertex we have one quadrangle
   } // triangles
 
   require(triangles.size() * 3 == quadrangles.size(),
           "The number of quadrangles (" + d2s(quadrangles.size()) +
-          " is not equal to number of triangles (" + d2s(triangles.size()) +
-          " multiplying by 3 (" + d2s(3 * triangles.size()) + ")");
+          ") is not equal to number of triangles (" + d2s(triangles.size()) +
+          ") multiplying by 3 (" + d2s(3 * triangles.size()) + ")");
 }
 
 
@@ -1360,21 +1361,21 @@ void Mesh::redefine_lines(const IncidenceMatrix &incidence_matrix,
 
     // we change existing line and add new line at the end of list
     lines[line]->set_vertex(1, n_old_vertices + edge); // changing existing line
-    lines.push_back(new Line(n_old_vertices + edge, ver2,
-                             lines[line]->get_material_id())); // add new line
+    lines.push_back(MeshElement_ptr(new Line(n_old_vertices + edge, ver2,
+                                             lines[line]->get_material_id()))); // add new line
   }
 
   require(n_old_lines * 2 == lines.size(),
           "The number of physical lines (" + d2s(lines.size()) +
-          " is not equal to number of original physical lines (" + d2s(n_old_lines) +
-          " multiplying by 2 (" + d2s(2 * n_old_lines) + ")");
+          ") is not equal to number of original physical lines (" + d2s(n_old_lines) +
+          ") multiplying by 2 (" + d2s(2 * n_old_lines) + ")");
 }
 
 
 
 
 
-void Mesh::edge_numeration(std::vector<MeshElement*> &cells,
+void Mesh::edge_numeration(std::vector<MeshElement_ptr> &cells,
                            const IncidenceMatrix &incidence_matrix,
                            bool initialize_edges)
 {
@@ -1405,9 +1406,9 @@ void Mesh::edge_numeration(std::vector<MeshElement*> &cells,
           cells[cell]->set_edge(lne, gne);
           // initialize edge
           if (initialize_edges)
-            edges[gne] = new Line(std::min(ii, jj),
-                                  std::max(ii, jj),
-                                  cells[cell]->get_material_id());
+            edges[gne] = MeshElement_ptr(new Line(std::min(ii, jj),
+                                                  std::max(ii, jj),
+                                                  cells[cell]->get_material_id()));
           // increase local number of edge
           ++lne;
         }
@@ -1423,7 +1424,7 @@ void Mesh::edge_numeration(std::vector<MeshElement*> &cells,
 
 
 
-void Mesh::face_numeration(std::vector<MeshElement*> &cells,
+void Mesh::face_numeration(std::vector<MeshElement_ptr> &cells,
                            const IncidenceMatrix &incidence_matrix,
                            VectorMap &edge_vertex_incidence)
 {
@@ -1467,7 +1468,8 @@ void Mesh::face_numeration(std::vector<MeshElement*> &cells,
             sort(face_vertices.begin(), face_vertices.end());
 
             // add this face to faces list
-            faces.push_back(new Triangle(face_vertices, cells[cell]->get_material_id()));
+            faces.push_back(MeshElement_ptr(new Triangle(face_vertices,
+                                                         cells[cell]->get_material_id())));
 
             // add the number of face into array
             face_numbers.push_back(n_faces);
@@ -1594,7 +1596,7 @@ Point Mesh::get_vertex(const unsigned int number) const
 {
   expect(number < vertices.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of vertices (" + d2s(vertices.size()) + ")");
+         " is bigger than the number of vertices (" + d2s(vertices.size()) + "))");
   return vertices[number];
 }
 
@@ -1602,7 +1604,7 @@ MeshElement& Mesh::get_point(const unsigned int number) const
 {
   expect(number < points.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of physical points (" + d2s(points.size()) + ")");
+         " is bigger than the number of physical points (" + d2s(points.size()) + "))");
   return *(points[number]);
 }
 
@@ -1610,7 +1612,7 @@ MeshElement& Mesh::get_edge(const unsigned int number) const
 {
   expect(number < edges.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of edges (" + d2s(edges.size()) + ")");
+         " is bigger than the number of edges (" + d2s(edges.size()) + "))");
   return *(edges[number]);
 }
 
@@ -1618,7 +1620,7 @@ MeshElement& Mesh::get_line(const unsigned int number) const
 {
   expect(number < lines.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of lines (" + d2s(lines.size()) + ")");
+         " is bigger than the number of lines (" + d2s(lines.size()) + "))");
   return *(lines[number]);
 }
 
@@ -1626,7 +1628,7 @@ MeshElement& Mesh::get_face(const unsigned int number) const
 {
   expect(number < faces.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of faces (" + d2s(faces.size()) + ")");
+         " is bigger than the number of faces (" + d2s(faces.size()) + "))");
   return *(faces[number]);
 }
 
@@ -1634,7 +1636,7 @@ MeshElement& Mesh::get_triangle(const unsigned int number) const
 {
   expect(number < triangles.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of triangles (" + d2s(triangles.size()) + ")");
+         " is bigger than the number of triangles (" + d2s(triangles.size()) + "))");
   return *(triangles[number]);
 }
 
@@ -1642,7 +1644,7 @@ MeshElement& Mesh::get_tetrahedron(const unsigned int number) const
 {
   expect(number < tetrahedra.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of tetrahedra (" + d2s(tetrahedra.size()) + ")");
+         " is bigger than the number of tetrahedra (" + d2s(tetrahedra.size()) + "))");
   return *(tetrahedra[number]);
 }
 
@@ -1650,7 +1652,7 @@ MeshElement& Mesh::get_quadrangle(const unsigned int number) const
 {
   expect(number < quadrangles.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of quadrangles (" + d2s(quadrangles.size()) + ")");
+         " is bigger than the number of quadrangles (" + d2s(quadrangles.size()) + "))");
   return *(quadrangles[number]);
 }
 
@@ -1658,7 +1660,7 @@ MeshElement& Mesh::get_hexahedron(const unsigned int number) const
 {
   expect(number < hexahedra.size(),
          "The required number (" + d2s(number) +
-         " is bigger than the number of hexahedra (" + d2s(hexahedra.size()) + ")");
+         " is bigger than the number of hexahedra (" + d2s(hexahedra.size()) + "))");
   return *(hexahedra[number]);
 }
 
@@ -1762,7 +1764,7 @@ unsigned int Mesh::find_face_from_two_edges(const unsigned int edge1,
 //
 //-------------------------------------------------------
 void write_elements(std::ostream &out,
-                    const std::vector<MeshElement*> &elems,
+                    const std::vector<MeshElement_ptr> &elems,
                     unsigned int &serial_number)
 {
   for (unsigned int el = 0; el < elems.size(); ++el, ++serial_number)

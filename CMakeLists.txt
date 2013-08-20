@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type of the project (Debug, Release)")
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
 
 
 # --- some definitions ---
@@ -21,10 +24,10 @@ set(TETHEX_VERSION_PATCH 4)
 # --- useful variables and options ---
 option(TESTING "Do you want to launch testing procedure before using the program?" OFF)
 option(DELETE_SIMPLICES "Delete simplices after converting them into bricks (to economize some memory)" ON)
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
+if(TESTING AND NOT DELETE_SIMPLICES)
+  message("If TESTING=ON we need to remove simplices. Otherwise testing procedures will fail. Therefore DELETE_SIMPLICES=ON")
+  set(DELETE_SIMPLICES ON CACHE BOOL "" FORCE)
+endif(TESTING AND NOT DELETE_SIMPLICES)
 
 set(HAVE_64BIT_SIZE_T OFF CACHE INTERNAL "")
 include(CheckTypeSize)
@@ -32,6 +35,22 @@ check_type_size("void*" SIZEOF_VOID_P)
 if(SIZEOF_VOID_P EQUAL 8)
   set(HAVE_64BIT_SIZE_T ON CACHE INTERNAL "")
 endif(SIZEOF_VOID_P EQUAL 8)
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+  if(GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7)
+    message("C++11 activated")
+    add_definitions("-std=gnu++11")
+  elseif(GCC_VERSION VERSION_GREATER 4.3 OR GCC_VERSION VERSION_EQUAL 4.3)
+    message("C++0x activated")
+    add_definitions("-std=gnu++0x")
+  else()
+    message(FATAL_ERROR "C++11 or C++0x needed. Therefore a gcc compiler with a version higher than (or equal to) 4.3 is needed.")
+  endif()
+else(CMAKE_COMPILER_IS_GNUCXX)
+  message("C++0x activated")
+  add_definitions("-std=c++0x")
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
 
 # --- write the variables initialized here to config.h file ---
@@ -48,7 +67,7 @@ include_directories(${PROJECT_BINARY_DIR}) # because config.h file is in binary 
 
 # --- sources and headers ---
 set(SRC_LIST main.cpp tethex.cpp)
-set(HDR_LIST tethex.h)
+set(HDR_LIST tethex.h testing.h)
 
 
 # --- Google Test ---

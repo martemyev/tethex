@@ -23,6 +23,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <memory>
 
 // the idea of such definitions was seen in deal.II sources.
 // thanks to its authors for that
@@ -360,6 +361,13 @@ protected:
                  */
   MeshElement& operator =(const MeshElement &elem);
 };
+
+
+
+/**
+ * Smart pointer to an instance of MeshElement class
+ */
+typedef std::shared_ptr<MeshElement> MeshElement_ptr;
 
 
 
@@ -787,7 +795,7 @@ public:
                  * @param cells - the list of all mesh cells
                  */
   IncidenceMatrix(const unsigned int n_vertices,
-                  const std::vector<MeshElement*> &cells);
+                  const std::vector<MeshElement_ptr> &cells);
 
                 /**
                  * Destructor
@@ -998,42 +1006,42 @@ private:
                  * Physical points.
                  *They are not treated - just copied into new mesh file.
                  */
-  std::vector<MeshElement*> points;
+  std::vector<MeshElement_ptr> points;
 
                 /**
                  * Mesh lines - mean physical lines
                  */
-  std::vector<MeshElement*> lines;
+  std::vector<MeshElement_ptr> lines;
 
                 /**
                  * Mesh edges (oriented lines)
                  */
-  std::vector<MeshElement*> edges;
+  std::vector<MeshElement_ptr> edges;
 
                 /**
                  * Mesh faces
                  */
-  std::vector<MeshElement*> faces;
+  std::vector<MeshElement_ptr> faces;
 
                 /**
                  * Mesh triangles
                  */
-  std::vector<MeshElement*> triangles;
+  std::vector<MeshElement_ptr> triangles;
 
                 /**
                  * Mesh tetrahedra
                  */
-  std::vector<MeshElement*> tetrahedra;
+  std::vector<MeshElement_ptr> tetrahedra;
 
                 /**
                  * Mesh quadrangles
                  */
-  std::vector<MeshElement*> quadrangles;
+  std::vector<MeshElement_ptr> quadrangles;
 
                 /**
                  * Mesh hexahedra
                  */
-  std::vector<MeshElement*> hexahedra;
+  std::vector<MeshElement_ptr> hexahedra;
 
   typedef std::vector<std::map<unsigned int, unsigned int> > VectorMap;
 
@@ -1049,7 +1057,7 @@ private:
                  * @param initialize_edges - wether we need to initialize the vector of all edges of the mesh
                  *                           Sometimes we need to do it, sometimes we don't need (or even shouldn't).
                  */
-  void edge_numeration(std::vector<MeshElement*> &cells,
+  void edge_numeration(std::vector<MeshElement_ptr> &cells,
                        const IncidenceMatrix &incidence_matrix,
                        bool initialize_edges);
 
@@ -1060,7 +1068,7 @@ private:
                  * @param edge_vertex_incidence - it's a structure of incidence between
                  *                                edges and vertices opposite to them.
                  */
-  void face_numeration(std::vector<MeshElement*> &cells,
+  void face_numeration(std::vector<MeshElement_ptr> &cells,
                        const IncidenceMatrix &incidence_matrix,
                        VectorMap &edge_vertex_incidence);
 
@@ -1096,7 +1104,7 @@ private:
                  * @param shift - to make dense sequence of vertices we need to
                  *                point out from what number new type of vertices starts
                  */
-  void set_new_vertices(const std::vector<MeshElement*> &elements,
+  void set_new_vertices(const std::vector<MeshElement_ptr> &elements,
                         const unsigned int n_old_vertices,
                         const unsigned int shift);
 
@@ -1201,7 +1209,7 @@ double cell_measure_3D(const std::vector<Point> &vertices,
                  * @param serial_number - serial number of mesh element in mesh file
                  */
 void write_elements(std::ostream &out,
-                    const std::vector<MeshElement*> &elems,
+                    const std::vector<MeshElement_ptr> &elems,
                     unsigned int &serial_number);
 
                 /**
