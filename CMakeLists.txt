@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
-set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type of the project (Debug, Release)")
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
 
 
 # --- some definitions ---
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  add_definitions(-DDEBUG)
-endif(CMAKE_BUILD_TYPE MATCHES Debug)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type of the project (Debug, Release)")
+set(DEBUG ON CACHE BOOL "Build the library with debug features! Don't confuse with compiler debug options!")
+
+if(CMAKE_BUILD_TYPE MATCHES Release)
+  set(DEBUG OFF CACHE BOOL "Build the library with debug features! Don't confuse with compiler debug options!" FORCE)
+endif(CMAKE_BUILD_TYPE MATCHES Release)
 
 
 # --- project ---
@@ -18,7 +17,7 @@ project(tethex)
 # --- set version ---
 set(TETHEX_VERSION_MAJOR 0)
 set(TETHEX_VERSION_MINOR 0)
-set(TETHEX_VERSION_PATCH 5)
+set(TETHEX_VERSION_PATCH 6)
 
 
 # --- useful variables and options ---
@@ -33,24 +32,39 @@ set(HAVE_64BIT_SIZE_T OFF CACHE INTERNAL "")
 include(CheckTypeSize)
 check_type_size("void*" SIZEOF_VOID_P)
 if(SIZEOF_VOID_P EQUAL 8)
-  set(HAVE_64BIT_SIZE_T ON CACHE INTERNAL "")
+  set(HAVE_64BIT_SIZE_T ON CACHE INTERNAL "" FORCE)
 endif(SIZEOF_VOID_P EQUAL 8)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
   if(GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7)
-    message("C++11 activated")
+    message("C++11 is activated")
     add_definitions("-std=gnu++11")
   elseif(GCC_VERSION VERSION_GREATER 4.3 OR GCC_VERSION VERSION_EQUAL 4.3)
-    message("C++0x activated")
+    message("C++0x is activated")
     add_definitions("-std=gnu++0x")
   else()
     message(FATAL_ERROR "C++11 or C++0x needed. Therefore a gcc compiler with a version higher than (or equal to) 4.3 is needed.")
   endif()
 else(CMAKE_COMPILER_IS_GNUCXX)
-  message("C++0x activated")
+  message("C++0x is activated")
   add_definitions("-std=c++0x")
 endif(CMAKE_COMPILER_IS_GNUCXX)
+
+
+
+# --- Boost libraries ---
+find_package(Boost COMPONENTS program_options)
+if(Boost_FOUND)
+  message("Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
+  message("Boost_LIBRARIES = ${Boost_LIBRARIES}")
+  include_directories(${Boost_INCLUDE_DIRS})
+  set(BOOST ON CACHE INTERNAL "" FORCE)
+else(Boost_FOUND)
+  message("WARNING: Boost wasn't found")
+  set(BOOST OFF CACHE INTERNAL "" FORCE)
+endif(Boost_FOUND)
+
 
 
 # --- write the variables initialized here to config.h file ---
@@ -58,7 +72,9 @@ message("Options:")
 message("  CMAKE_BUILD_TYPE  = ${CMAKE_BUILD_TYPE}")
 message("  TESTING           = ${TESTING}")
 message("  DELETE_SIMPLICES  = ${DELETE_SIMPLICES}")
+message("  DEBUG             = ${DEBUG}")
 message("  HAVE_64BIT_SIZE_T = ${HAVE_64BIT_SIZE_T}")
+message("  BOOST             = ${BOOST}")
 configure_file(
   "${PROJECT_SOURCE_DIR}/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h")
@@ -86,6 +102,7 @@ endif(TESTING)
 
 # --- make ---
 add_executable(${PROJECT_NAME} ${SRC_LIST} ${HDR_LIST})
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 if(TESTING)
   target_link_libraries(${PROJECT_NAME} ${GTEST_LIB} pthread)
 endif(TESTING)

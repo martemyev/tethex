@@ -1046,6 +1046,18 @@ private:
   typedef std::vector<std::map<unsigned int, unsigned int> > VectorMap;
 
                 /**
+                 * the number of quadrangles that existed in the input mesh
+                 * and then were converted to have the same order of vertices for all elements
+                 */
+  unsigned int n_converted_quadrangles;
+
+                /**
+                 * the number of hexahedra that existed in the input mesh
+                 * and then were converted to have the same order of vertices for all elements
+                 */
+  unsigned int n_converted_hexahedra;
+
+                /**
                  * Free the memory to read again, for example
                  */
   void clean();

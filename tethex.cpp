@@ -653,6 +653,8 @@ inline unsigned int IncidenceMatrix::get_n_nonzero() const
 //
 //-------------------------------------------------------
 Mesh::Mesh()
+  : n_converted_quadrangles(0),
+    n_converted_hexahedra(0)
 { }
 
 
@@ -700,7 +702,7 @@ void Mesh::read(const std::string &file)
   // to Gmsh versions since 2.6.0, therefore
   // in debug mode you'll have an exception if the mesh version is less than 2.2.
   // There is no exception in release mode though.
-  // So to read the mesh with version 2.1-, check that DEBUG variable is set to 0.
+  // So to read the mesh with version 2.1 and less, check that DEBUG variable is set to 0.
   // But NOTE that msh files of 1.0 format have absolutely different structure!
   expect(version >= 2.2,
          "The version of Gmsh's mesh is too old (" + d2s(version) +\
@@ -985,6 +987,7 @@ void Mesh::convert()
 
   if (!hexahedra.empty())
     convert_hexahedra();
+
   if (!quadrangles.empty())
     convert_quadrangles();
 }
@@ -1299,30 +1302,24 @@ void Mesh::convert_triangles(const IncidenceMatrix &incidence_matrix,
 
 void Mesh::convert_quadrangles()
 {
-  unsigned int n_converted_quads = 0;
   for (unsigned int elem = 0; elem < quadrangles.size(); ++elem)
   {
     std::vector<unsigned int> quad_vertices(Quadrangle::n_vertices);
     for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
       quad_vertices[i] = quadrangles[elem]->get_vertex(i);
 
-#if defined(TESTING)
     const unsigned ver = quad_vertices[1];
-#endif
 
     change_vertices_order(2, vertices, quad_vertices);
 
-#if defined(TESTING)
+    // since only first and third vertices are swapped (if any)
+    // we compare only one vertex number
     if (quad_vertices[1] != ver)
-      ++n_converted_quads;
-#endif
+      ++n_converted_quadrangles;
 
     for (unsigned int i = 0; i < Quadrangle::n_vertices; ++i)
       quadrangles[elem]->set_vertex(i, quad_vertices[i]);
   }
-//#if defined(TESTING)
-//  std::cout << "the number of converted quadrangles : " << n_converted_quads << std::endl;
-//#endif
 }
 
 
@@ -1337,7 +1334,13 @@ void Mesh::convert_hexahedra()
     for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
       hexahedron_vertices[i] = hexahedra[elem]->get_vertex(i);
 
+    const unsigned ver = hexahedron_vertices[0];
+
     change_vertices_order(3, vertices, hexahedron_vertices);
+
+    // we compare only one vertex number
+    if (hexahedron_vertices[0] != ver)
+      ++n_converted_hexahedra;
 
     for (unsigned int i = 0; i < Hexahedron::n_vertices; ++i)
       hexahedra[elem]->set_vertex(i, hexahedron_vertices[i]);
@@ -1668,15 +1671,17 @@ MeshElement& Mesh::get_hexahedron(const unsigned int number) const
 
 void Mesh::info(std::ostream &out) const
 {
-  out << "\nvertices      : " << vertices.size()
-      << "\npoints (phys) : " << points.size()
-      << "\nedges         : " << edges.size()
-      << "\nlines         : " << lines.size()
-      << "\ntriangles     : " << triangles.size()
-      << "\nfaces         : " << faces.size()
-      << "\ntetrahedra    : " << tetrahedra.size()
-      << "\nquadrangles   : " << quadrangles.size()
-      << "\nhexahedra     : " << hexahedra.size()
+  out << "\nvertices       : " << vertices.size()
+      << "\npoints (phys)  : " << points.size()
+      << "\nedges          : " << edges.size()
+      << "\nlines          : " << lines.size()
+      << "\ntriangles      : " << triangles.size()
+      << "\nfaces          : " << faces.size()
+      << "\ntetrahedra     : " << tetrahedra.size()
+      << "\nquadrangles    : " << quadrangles.size()
+      << "\nhexahedra      : " << hexahedra.size()
+      << "\nconverted quads: " << n_converted_quadrangles
+      << "\nconverted hexs : " << n_converted_hexahedra
       << "\n\n";
 }
 

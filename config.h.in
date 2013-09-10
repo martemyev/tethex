@@ -17,8 +17,12 @@
  * GNU General Public License for more details.
  */
 
+#cmakedefine DEBUG
 #cmakedefine TESTING
 #cmakedefine DELETE_SIMPLICES
 #cmakedefine HAVE_64BIT_SIZE_T
+#cmakedefine BOOST
+
+#define TETHEX_VERSION "@TETHEX_VERSION_MAJOR@.@TETHEX_VERSION_MINOR@.@TETHEX_VERSION_PATCH@"
 
 #endif // TETHEX_CONFIG_H_IN
