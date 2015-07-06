@@ -727,7 +727,17 @@ void Mesh::read(const std::string &file)
   // if we face specific keyword, we'll treat the section.
   while (in >> str)
   {
-    if (str == "$Nodes") // read the mesh vertices
+    if (str == "$PhysicalNames") // read the section of names of physical entities
+    {
+      unsigned int n_names;
+      in >> n_names;
+      getline(in, str);
+      physical_names.resize(n_names);
+      for (unsigned int i = 0; i < n_names; ++i)
+        getline(in, physical_names[i]);
+    }
+
+    else if (str == "$Nodes") // read the mesh vertices
     {
       unsigned int n_vertices; // the number of all mesh vertices (that are saved in the file)
       in >> n_vertices; // read that number
@@ -1513,7 +1523,17 @@ void Mesh::write(const std::string &file)
   out.setf(std::ios::scientific);
   out.precision(16);
 
-  out << "$MeshFormat\n2.2 0 8\n$EndMeshFormat\n$Nodes\n" << vertices.size() << "\n";
+  out << "$MeshFormat\n2.2 0 8\n$EndMeshFormat\n";
+  if (!physical_names.empty())
+  {
+    out << "$PhysicalNames\n";
+    out << physical_names.size() << "\n";
+    for (unsigned int i = 0; i < physical_names.size(); ++i)
+      out << physical_names[i] << "\n";
+    out << "$EndPhysicalNames\n";
+  }
+
+  out << "$Nodes\n" << vertices.size() << "\n";
   for (unsigned int ver = 0; ver < vertices.size(); ++ver)
   {
     out << ver + 1 << " ";
