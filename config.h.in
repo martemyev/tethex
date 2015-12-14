@@ -1,9 +1,7 @@
-#ifndef TETHEX_CONFIG_H
-#define TETHEX_CONFIG_H
-
 /*
  * tethex - tetrahedra to hexahedra conversion
- * Copyright (c) 2013 Mikhail Artemiev
+ * Copyright (c) 2013 Mikhail Artemyev
+ * Report issues: github.com/martemyev/tethex/issues
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,9 +13,16 @@
  * GNU General Public License for more details.
  */
 
+#ifndef TETHEX_CONFIG_H
+#define TETHEX_CONFIG_H
+
 #cmakedefine DEBUG
 #cmakedefine TESTING
 #cmakedefine DELETE_SIMPLICES
+
+#ifndef nullptr
+  #define nullptr NULL
+#endif
 
 #define TETHEX_VERSION "@TETHEX_VERSION_MAJOR@.@TETHEX_VERSION_MINOR@.@TETHEX_VERSION_PATCH@"
 

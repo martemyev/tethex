@@ -1,9 +1,7 @@
-#ifndef TETHEX_TETHEX_H
-#define TETHEX_TETHEX_H
-
 /*
  * tethex - tetrahedra to hexahedra conversion
- * Copyright (c) 2013 Mikhail Artemiev
+ * Copyright (c) 2013 Mikhail Artemyev
+ * Report issues: github.com/martemyev/tethex/issues
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,13 +13,15 @@
  * GNU General Public License for more details.
  */
 
-#include <string>
-#include <stdexcept>
-#include <sstream>
-#include <vector>
-#include <map>
+#ifndef TETHEX_TETHEX_H
+#define TETHEX_TETHEX_H
+
 #include <iostream>
-#include <memory>
+#include <map>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace tethex {
 
@@ -72,7 +72,7 @@ inline std::string d2s(T data)
                  * if requirement or expectation fails
                  */
 void requirement_fails(const char *file,
-                       unsigned int line,
+                       int line,
                        std::string message);
 
 
@@ -95,7 +95,7 @@ public:
                  * The number of Cartesian coordinates, that describe the point.
                  * Here we always use 3 coordinates to describe a point.
                  */
-  static const unsigned int n_coord = 3;
+  static const int n_coord = 3;
 
                 /**
                  * Default constructor.
@@ -117,9 +117,9 @@ public:
                  * @param y_coord - y-coordinate of the point
                  * @param z_coord - z-coordinate of the point
                  */
-  Point(const double x_coord,
-        const double y_coord = 0,
-        const double z_coord = 0);
+  Point(double x_coord,
+        double y_coord = 0,
+        double z_coord = 0);
 
                 /**
                  * Copy constructor
@@ -135,14 +135,14 @@ public:
                  * Get the coordinate of the point
                  * @param number - the serial number of coordinate [0, n_coord)
                  */
-  double get_coord(unsigned int number) const;
+  double get_coord(int number) const;
 
                 /**
                  * Set the value of specific coordinate
                  * @param number - the number of coordinate that we want to set
                  * @param value - new value of coordinate
                  */
-  void set_coord(unsigned int number, double value);
+  void set_coord(int number, double value);
 
 private:
                 /**
@@ -179,83 +179,83 @@ public:
                 /**
                  * Get the number of vertices
                  */
-  unsigned int get_n_vertices() const;
+  int get_n_vertices() const;
 
                 /**
                  * Get the number of edges
                  */
-  unsigned int get_n_edges() const;
+  int get_n_edges() const;
 
                 /**
                  * Get the number of faces
                  */
-  unsigned int get_n_faces() const;
+  int get_n_faces() const;
 
                 /**
                  * Get type of the element that is used in Gmsh
                  */
-  unsigned int get_gmsh_el_type() const;
+  int get_gmsh_el_type() const;
 
                 /**
                  * Get the material ID of the element.
                  * It's a number that describes the physical domain
                  * to which the element belongs.
                  */
-  unsigned int get_material_id() const;
+  int get_material_id() const;
 
                 /**
                  * Get the number of vertex describing the element
                  * @param number - local number of vertex [0, n_vertices)
                  * @return global number of vertex (among other mesh vertices)
                  */
-  unsigned int get_vertex(unsigned int number) const;
+  int get_vertex(int number) const;
 
                 /**
                  * Get the number of edge describing the element
                  * @param number - local number of edge [0, n_edges)
                  * @return global number of edge (among other mesh edges)
                  */
-  unsigned int get_edge(unsigned int number) const;
+  int get_edge(int number) const;
 
                 /**
                  * Get the number of face describing the element
                  * @param number - local number of face [0, n_faces)
                  * @return global number of face (among other mesh faces)
                  */
-  unsigned int get_face(unsigned int number) const;
+  int get_face(int number) const;
 
                 /**
                  * Set the number of vertex
                  * @param local_number - the number of vertex inside the element [0, n_vertices)
                  * @param global_number - the number of vertex among other vertices of the mesh
                  */
-  void set_vertex(unsigned int local_number, unsigned int global_number);
+  void set_vertex(int local_number, int global_number);
 
                 /**
                  * Set the number of edge
                  * @param local_number - the number of edge inside the element [0, n_edges)
                  * @param global_number - the number of edge among other edges of the mesh
                  */
-  void set_edge(unsigned int local_number, unsigned int global_number);
+  void set_edge(int local_number, int global_number);
 
                 /**
                  * Set the number of face
                  * @param local_number - the number of face inside the element [0, n_faces)
                  * @param global_number - the number of face among other faces of the mesh
                  */
-  void set_face(unsigned int local_number, unsigned int global_number);
+  void set_face(int local_number, int global_number);
 
                 /**
                  * Set all faces once at time
                  * @param face_numbers - the numbers of all cell faces
                  */
-  void set_faces(const std::vector<unsigned int> &face_numbers);
+  void set_faces(const std::vector<int> &face_numbers);
 
                 /**
                  * Check - whether the element contains the vertex or not
                  * @param vertex - the number of vertex that we want to check
                  */
-  bool contains(const unsigned int vertex) const;
+  bool contains(const int vertex) const;
 
 protected:
                 /**
@@ -263,51 +263,51 @@ protected:
                  * It must be defined in each derived class,
                  * because it's 0 by default.
                  */
-  unsigned int n_vertices;
+  int n_vertices;
 
                 /**
                  * Vertices (i.e. their global numbers) describing the element
                  */
-  std::vector<unsigned int> vertices;
+  std::vector<int> vertices;
 
                 /**
                  * The number of edges describing the element.
                  * It must be defined in each derived class,
                  * because it's 0 by default.
                  */
-  unsigned int n_edges;
+  int n_edges;
 
                 /**
                  * Edges (i.e. their global numbers) describing the element
                  * It's not always used.
                  */
-  std::vector<unsigned int> edges;
+  std::vector<int> edges;
 
                 /**
                  * The number of faces describing the element.
                  * It must be defined in each derived class,
                  * because it's 0 by default.
                  */
-  unsigned int n_faces;
+  int n_faces;
 
                 /**
                  * Faces (i.e. their global numbers) describing the element
                  * It's not always used.
                  */
-  std::vector<unsigned int> faces;
+  std::vector<int> faces;
 
                 /**
                  * ID of the physical domain where the element takes place.
                  * It's necessary to distinguish media with different physical properties.
                  */
-  unsigned int material_id;
+  int material_id;
 
                 /**
                  * Type of the element (its number actually) like in Gmsh.
                  * It must be defined in every derived class.
                  * It's 0 by default.
                  */
-  unsigned int gmsh_el_type;
+  int gmsh_el_type;
 
                 /**
                  * Constructor is protected to prevent creating MeshElement objects directly
@@ -316,10 +316,10 @@ protected:
                  * @param n_fac - number of faces
                  * @param el_type - type of the element in Gmsh
                  */
-  MeshElement(unsigned int n_ver = 0,
-              unsigned int n_edg = 0,
-              unsigned int n_fac = 0,
-              unsigned int el_type = 0);
+  MeshElement(int n_ver = 0,
+              int n_edg = 0,
+              int n_fac = 0,
+              int el_type = 0);
 
                 /**
                  * Copy constructor
@@ -332,12 +332,6 @@ protected:
   MeshElement& operator =(const MeshElement &elem);
 };
 
-
-
-/**
- * Smart pointer to an instance of MeshElement class
- */
-typedef std::shared_ptr<MeshElement> MeshElement_ptr;
 
 
 
@@ -357,22 +351,22 @@ public:
                 /**
                  * Point is a vertex itself
                  */
-  static const unsigned int n_vertices = 1;
+  static const int n_vertices = 1;
 
                 /**
                  * It's 0-dimensional shape, and it's a boundary for edge
                  */
-  static const unsigned int n_edges = 0;
+  static const int n_edges = 0;
 
                 /**
                  * It has no faces
                  */
-  static const unsigned int n_faces = 0;
+  static const int n_faces = 0;
 
                 /**
                  * In Gmsh physical point is defined by number 15
                  */
-  static const unsigned int gmsh_el_type = 15;
+  static const int gmsh_el_type = 15;
 
                 /**
                  * Constructor
@@ -384,16 +378,16 @@ public:
                  * @param ver - the list of vertices
                  * @param mat_id - the material ID
                  */
-  PhysPoint(const std::vector<unsigned int> &ver,
-            const unsigned int mat_id = 0);
+  PhysPoint(const std::vector<int> &ver,
+            int mat_id = 0);
 
                 /**
                  * Constructor with parameters
                  * @param ver - a vertex
                  * @param mat_id - material ID
                  */
-  PhysPoint(const unsigned int ver,
-            const unsigned int mat_id = 0);
+  PhysPoint(const int ver,
+            int mat_id = 0);
 };
 
 
@@ -417,22 +411,22 @@ public:
                 /**
                  * There are 2 vertices to describe a line
                  */
-  static const unsigned int n_vertices = 2;
+  static const int n_vertices = 2;
 
                 /**
                  * Line is edge itself, so the number of edges is 1
                  */
-  static const unsigned int n_edges = 1;
+  static const int n_edges = 1;
 
                 /**
                  * It's 1D shape, so there is no faces here
                  */
-  static const unsigned int n_faces = 0;
+  static const int n_faces = 0;
 
                 /**
                  * In Gmsh line (physical line) is defined by number 1
                  */
-  static const unsigned int gmsh_el_type = 1;
+  static const int gmsh_el_type = 1;
 
                 /**
                  * Constructor
@@ -444,8 +438,8 @@ public:
                  * @param ver - the list of vertices
                  * @param mat_id - the material ID
                  */
-  Line(const std::vector<unsigned int> &ver,
-       const unsigned int mat_id = 0);
+  Line(const std::vector<int> &ver,
+       const int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -453,22 +447,22 @@ public:
                  * @param v2 - another vertex
                  * @param mat_id - material ID
                  */
-  Line(const unsigned int v1,
-       const unsigned int v2,
-       const unsigned int mat_id = 0);
+  Line(int v1,
+       int v2,
+       int mat_id = 0);
 
                 /**
                  * Find common vertex between two lines
                  * @param line - second line for seeking common vertex
                  */
-  unsigned int common_vertex(const Line& line) const;
+  int common_vertex(const Line& line) const;
 
                 /**
                  * Get another vertex (different from that we have)
                  * @param vertex - we have the number of one vertex (this one),
                  *                 and we want to find the number of another vertex
                  */
-  unsigned int another_vertex(const unsigned int vertex) const;
+  int another_vertex(int vertex) const;
 };
 
 
@@ -492,23 +486,23 @@ public:
                 /**
                  * The number of vertices of triangle
                  */
-  static const unsigned int n_vertices = 3;
+  static const int n_vertices = 3;
 
                 /**
                  * The number of edges of triangle
                  */
-  static const unsigned int n_edges = 3;
+  static const int n_edges = 3;
 
                 /**
                  * Triangle is 2D shape,
                  * so it's a face itself (for tetrahedron)
                  */
-  static const unsigned int n_faces = 1;
+  static const int n_faces = 1;
 
                 /**
                  * In Gmsh triangle is defined by number 2
                  */
-  static const unsigned int gmsh_el_type = 2;
+  static const int gmsh_el_type = 2;
 
                 /**
                  * Default constructor
@@ -520,8 +514,8 @@ public:
                  * @param ver - triangle vertices
                  * @param mat_id - material ID
                  */
-  Triangle(const std::vector<unsigned int> &ver,
-           const unsigned int mat_id = 0);
+  Triangle(const std::vector<int> &ver,
+           int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -530,10 +524,10 @@ public:
                  * @param v3 - third vertex
                  * @param mat_id - material ID
                  */
-  Triangle(const unsigned int v1,
-           const unsigned int v2,
-           const unsigned int v3,
-           const unsigned int mat_id = 0);
+  Triangle(int v1,
+           int v2,
+           int v3,
+           int mat_id = 0);
 };
 
 
@@ -557,22 +551,22 @@ public:
                 /**
                  * The number of vertices of tetrahedron
                  */
-  static const unsigned int n_vertices = 4;
+  static const int n_vertices = 4;
 
                 /**
                  * The number of edges of tetrahedron
                  */
-  static const unsigned int n_edges = 6;
+  static const int n_edges = 6;
 
                 /**
                  * The number of faces of tetrahedron
                  */
-  static const unsigned int n_faces = 4;
+  static const int n_faces = 4;
 
                 /**
                  * In Gmsh triangle is defined by number 2
                  */
-  static const unsigned int gmsh_el_type = 4;
+  static const int gmsh_el_type = 4;
 
                 /**
                  * Default constructor.
@@ -584,8 +578,8 @@ public:
                  * @param ver - triangle vertices
                  * @param mat_id - material ID
                  */
-  Tetrahedron(const std::vector<unsigned int> &ver,
-              const unsigned int mat_id = 0);
+  Tetrahedron(const std::vector<int> &ver,
+              int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -595,11 +589,11 @@ public:
                  * @param v4 - fourth vertex
                  * @param mat_id - material ID
                  */
-  Tetrahedron(const unsigned int v1,
-              const unsigned int v2,
-              const unsigned int v3,
-              const unsigned int v4,
-              const unsigned int mat_id = 0);
+  Tetrahedron(int v1,
+              int v2,
+              int v3,
+              int v4,
+              int mat_id = 0);
 };
 
 
@@ -622,23 +616,23 @@ public:
                 /**
                  * The number of vertices of quadrangle
                  */
-  static const unsigned int n_vertices = 4;
+  static const int n_vertices = 4;
 
                 /**
                  * The number of edges of quadrangle
                  */
-  static const unsigned int n_edges = 4;
+  static const int n_edges = 4;
 
                 /**
                  * Quadrangle is 2D shape,
                  * so it's a face itself (for hexahedron)
                  */
-  static const unsigned int n_faces = 1;
+  static const int n_faces = 1;
 
                 /**
                  * In Gmsh quadrangle is defined by number 3
                  */
-  static const unsigned int gmsh_el_type = 3;
+  static const int gmsh_el_type = 3;
 
                 /**
                  * Default constructor.
@@ -650,8 +644,8 @@ public:
                  * @param ver - quadrangle vertices
                  * @param mat_id - material ID
                  */
-  Quadrangle(const std::vector<unsigned int> &ver,
-             const unsigned int mat_id = 0);
+  Quadrangle(const std::vector<int> &ver,
+             int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -661,11 +655,11 @@ public:
                  * @param v4 - fourth vertex
                  * @param mat_id - material ID
                  */
-  Quadrangle(const unsigned int v1,
-             const unsigned int v2,
-             const unsigned int v3,
-             const unsigned int v4,
-             const unsigned int mat_id = 0);
+  Quadrangle(int v1,
+             int v2,
+             int v3,
+             int v4,
+             int mat_id = 0);
 };
 
 
@@ -689,22 +683,22 @@ public:
                 /**
                  * The number of vertices of hexahedron
                  */
-  static const unsigned int n_vertices = 8;
+  static const int n_vertices = 8;
 
                 /**
                  * The number of edges of hexahedron
                  */
-  static const unsigned int n_edges = 12;
+  static const int n_edges = 12;
 
                 /**
                  * The number of faces of hexahedron
                  */
-  static const unsigned int n_faces = 6;
+  static const int n_faces = 6;
 
                 /**
                  * In Gmsh hexahedron is defined by number 5
                  */
-  static const unsigned int gmsh_el_type = 5;
+  static const int gmsh_el_type = 5;
 
                 /**
                  * Default constructor.
@@ -716,8 +710,8 @@ public:
                  * @param ver - hexahedron vertices
                  * @param mat_id - material ID
                  */
-  Hexahedron(const std::vector<unsigned int> &ver,
-             const unsigned int mat_id = 0);
+  Hexahedron(const std::vector<int> &ver,
+             int mat_id = 0);
 
                 /**
                  * Constructor with parameters
@@ -725,15 +719,15 @@ public:
                  * @param v8 - 8-th vertex of hexahedron
                  * @param mat_id - material ID
                  */
-  Hexahedron(const unsigned int v1,
-             const unsigned int v2,
-             const unsigned int v3,
-             const unsigned int v4,
-             const unsigned int v5,
-             const unsigned int v6,
-             const unsigned int v7,
-             const unsigned int v8,
-             const unsigned int mat_id = 0);
+  Hexahedron(int v1,
+             int v2,
+             int v3,
+             int v4,
+             int v5,
+             int v6,
+             int v7,
+             int v8,
+             int mat_id = 0);
 };
 
 
@@ -744,8 +738,6 @@ public:
 // IncidenceMatrix
 //
 //-------------------------------------------------------
-
-//class MeshElement;
 
 /**
  * Incidence matrix describes the relations
@@ -764,8 +756,8 @@ public:
                  * @param n_vertices - the number of all mesh vertices
                  * @param cells - the list of all mesh cells
                  */
-  IncidenceMatrix(const unsigned int n_vertices,
-                  const std::vector<MeshElement_ptr> &cells);
+  IncidenceMatrix(int n_vertices,
+                  const std::vector<MeshElement*> &cells);
 
                 /**
                  * Destructor
@@ -781,35 +773,40 @@ public:
                  * @param col_number - the number of column where we seek (or another edge vertex)
                  * @return Serial number of the non zero element in the matrix.
                  */
-  unsigned int find(const unsigned int row_number,
-                    const unsigned int col_number) const;
+  int find(int row_number, int col_number) const;
 
                 /**
                  * Get the number of non zero elements in the matrix.
                  * Can be used to know the number of mesh edges.
                  */
-  unsigned int get_n_nonzero() const;
+  int get_n_nonzero() const;
 
 private:
                 /**
                  * The dimension of the matrix
                  */
-  unsigned int dim;
+  int dim;
 
                 /**
                  * The number of nonzero elements of lower matrix triangle
                  */
-  unsigned int n_non_zero;
+  int n_non_zero;
 
                 /**
                  * The number of nonzero elements in each row of lower matrix triangle
                  */
-  unsigned int *row;
+  int *row;
 
                 /**
                  * The numbers of nonzero elements of lower matrix triangle
                  */
-  unsigned int *col;
+  int *col;
+
+                /**
+                 * No copies
+                 */
+  IncidenceMatrix(const IncidenceMatrix&);
+  IncidenceMatrix& operator =(const IncidenceMatrix&);
 };
 
 
@@ -858,47 +855,47 @@ public:
                 /**
                  * Get the number of vertices
                  */
-  unsigned int get_n_vertices() const;
+  int get_n_vertices() const;
 
                 /**
                  * Get the number of physical points
                  */
-  unsigned int get_n_points() const;
+  int get_n_points() const;
 
                 /**
                  * Get the number of lines (physical lines)
                  */
-  unsigned int get_n_lines() const;
+  int get_n_lines() const;
 
                 /**
                  * Get the number of edges
                  */
-  unsigned int get_n_edges() const;
+  int get_n_edges() const;
 
                 /**
                  * Get the number of triangles
                  */
-  unsigned int get_n_triangles() const;
+  int get_n_triangles() const;
 
                 /**
                  * Get the number of faces
                  */
-  unsigned int get_n_faces() const;
+  int get_n_faces() const;
 
                 /**
                  * Get the number of tetrahedra
                  */
-  unsigned int get_n_tetrahedra() const;
+  int get_n_tetrahedra() const;
 
                 /**
                  * Get the number of tetrahedra
                  */
-  unsigned int get_n_quadrangles() const;
+  int get_n_quadrangles() const;
 
                 /**
                  * Get the number of hexahedra
                  */
-  unsigned int get_n_hexahedra() const;
+  int get_n_hexahedra() const;
 
                 /**
                  * Print short information
@@ -916,55 +913,55 @@ public:
                  * Get the copy of vertex
                  * @param number - the number of vertex
                  */
-  Point get_vertex(const unsigned int number) const;
+  Point get_vertex(int number) const;
 
                 /**
                  * Get the physical point
                  * @param number - the number of point
                  */
-  MeshElement& get_point(const unsigned int number) const;
+  MeshElement& get_point(int number) const;
 
                 /**
                  * Get the mesh edge
                  * @param number - the number of edge
                  */
-  MeshElement& get_edge(const unsigned int number) const;
+  MeshElement& get_edge(int number) const;
 
                 /**
                  * Get the physical line
                  * @param number - the number of line
                  */
-  MeshElement& get_line(const unsigned int number) const;
+  MeshElement& get_line(int number) const;
 
                 /**
                  * Get the mesh face
                  * @param number - the number of face
                  */
-  MeshElement& get_face(const unsigned int number) const;
+  MeshElement& get_face(int number) const;
 
                 /**
                  * Get the mesh triangle
                  * @param number - the number of triangle
                  */
-  MeshElement& get_triangle(const unsigned int number) const;
+  MeshElement& get_triangle(int number) const;
 
                 /**
                  * Get the mesh tetrahedron
                  * @param number - the number of tetrahedron
                  */
-  MeshElement& get_tetrahedron(const unsigned int number) const;
+  MeshElement& get_tetrahedron(int number) const;
 
                 /**
                  * Get the mesh quadrangle
                  * @param number - the number of quadrangle
                  */
-  MeshElement& get_quadrangle(const unsigned int number) const;
+  MeshElement& get_quadrangle(int number) const;
 
                 /**
                  * Get the mesh hexahedron
                  * @param number - the number of hexahedron
                  */
-  MeshElement& get_hexahedron(const unsigned int number) const;
+  MeshElement& get_hexahedron(int number) const;
 
 private:
                 /**
@@ -976,56 +973,56 @@ private:
                  * Physical points.
                  *They are not treated - just copied into new mesh file.
                  */
-  std::vector<MeshElement_ptr> points;
+  std::vector<MeshElement*> points;
 
                 /**
                  * Mesh lines - mean physical lines
                  */
-  std::vector<MeshElement_ptr> lines;
+  std::vector<MeshElement*> lines;
 
                 /**
                  * Mesh edges (oriented lines)
                  */
-  std::vector<MeshElement_ptr> edges;
+  std::vector<MeshElement*> edges;
 
                 /**
                  * Mesh faces
                  */
-  std::vector<MeshElement_ptr> faces;
+  std::vector<MeshElement*> faces;
 
                 /**
                  * Mesh triangles
                  */
-  std::vector<MeshElement_ptr> triangles;
+  std::vector<MeshElement*> triangles;
 
                 /**
                  * Mesh tetrahedra
                  */
-  std::vector<MeshElement_ptr> tetrahedra;
+  std::vector<MeshElement*> tetrahedra;
 
                 /**
                  * Mesh quadrangles
                  */
-  std::vector<MeshElement_ptr> quadrangles;
+  std::vector<MeshElement*> quadrangles;
 
                 /**
                  * Mesh hexahedra
                  */
-  std::vector<MeshElement_ptr> hexahedra;
+  std::vector<MeshElement*> hexahedra;
 
-  typedef std::vector<std::map<unsigned int, unsigned int> > VectorMap;
+  typedef std::vector<std::map<int, int> > VectorMap;
 
                 /**
                  * The number of quadrangles that existed in the input mesh
                  * and then were converted to have the same order of vertices for all elements
                  */
-  unsigned int n_converted_quadrangles;
+  int n_converted_quadrangles;
 
                 /**
                  * The number of hexahedra that existed in the input mesh
                  * and then were converted to have the same order of vertices for all elements
                  */
-  unsigned int n_converted_hexahedra;
+  int n_converted_hexahedra;
 
                 /**
                  * The vector of strings representing names of physical entities
@@ -1046,7 +1043,7 @@ private:
                  * @param initialize_edges - wether we need to initialize the vector of all edges of the mesh
                  *                           Sometimes we need to do it, sometimes we don't need (or even shouldn't).
                  */
-  void edge_numeration(std::vector<MeshElement_ptr> &cells,
+  void edge_numeration(std::vector<MeshElement*> &cells,
                        const IncidenceMatrix &incidence_matrix,
                        bool initialize_edges);
 
@@ -1057,7 +1054,7 @@ private:
                  * @param edge_vertex_incidence - it's a structure of incidence between
                  *                                edges and vertices opposite to them.
                  */
-  void face_numeration(std::vector<MeshElement_ptr> &cells,
+  void face_numeration(std::vector<MeshElement*> &cells,
                        const IncidenceMatrix &incidence_matrix,
                        VectorMap &edge_vertex_incidence);
 
@@ -1078,10 +1075,9 @@ private:
                  * @param vertices_incidence - incidence matrix between mesh vertices
                  * @param edge_vertex_incidence - incidence structure for vertices and opposite edges
                  */
-  unsigned int find_face_from_two_edges(const unsigned int edge1,
-                                        const unsigned int edge2,
-                                        const IncidenceMatrix &vertices_incidence,
-                                        const VectorMap &edge_vertex_incidence) const;
+  int find_face_from_two_edges(int edge1, int edge2,
+                               const IncidenceMatrix &vertices_incidence,
+                               const VectorMap &edge_vertex_incidence) const;
 
                 /**
                  * During conversion we add new vertices -
@@ -1093,9 +1089,9 @@ private:
                  * @param shift - to make dense sequence of vertices we need to
                  *                point out from what number new type of vertices starts
                  */
-  void set_new_vertices(const std::vector<MeshElement_ptr> &elements,
-                        const unsigned int n_old_vertices,
-                        const unsigned int shift);
+  void set_new_vertices(const std::vector<MeshElement*> &elements,
+                        int n_old_vertices,
+                        int shift);
 
                 /**
                  * Conversion from tetrahedra to hexahedra.
@@ -1104,7 +1100,7 @@ private:
                  * @param edge_vertex_incidence - the structure of incidence between
                  *                                mesh edges and vertices opposite to them
                  */
-  void convert_tetrahedra(const unsigned int n_old_vertices,
+  void convert_tetrahedra(int n_old_vertices,
                           const IncidenceMatrix &incidence_matrix,
                           const VectorMap edge_vertex_incidence);
 
@@ -1126,7 +1122,7 @@ private:
                  *                                It used in 3D during boundary triangles conversion.
                  */
   void convert_triangles(const IncidenceMatrix &incidence_matrix,
-                         const unsigned int n_old_vertices,
+                         int n_old_vertices,
                          bool numerate_edges,
                          const VectorMap &edge_vertex_incidence = VectorMap());
 
@@ -1139,7 +1135,7 @@ private:
                  * @param n_old_vertices - the number of original mesh vertices
                  */
   void redefine_lines(const IncidenceMatrix &incidence_matrix,
-                      const unsigned int n_old_vertices);
+                      int n_old_vertices);
 
                 /**
                  * Convert quadrangles into quadrangles.
@@ -1176,7 +1172,7 @@ private:
                  * This procedure is taken from deal.II sources.
                  */
 double cell_measure_2D(const std::vector<Point> &vertices,
-                       const std::vector<unsigned int> &indices);
+                       const std::vector<int> &indices);
 
                 /**
                  * Since this project was originally designed to connect Gmsh's meshes
@@ -1188,7 +1184,7 @@ double cell_measure_2D(const std::vector<Point> &vertices,
                  * This procedure is taken from deal.II sources.
                  */
 double cell_measure_3D(const std::vector<Point> &vertices,
-                       const std::vector<unsigned int> &indices);
+                       const std::vector<int> &indices);
 
                 /**
                  * Since all mesh elements are derived from one base MeshElement class,
@@ -1198,8 +1194,8 @@ double cell_measure_3D(const std::vector<Point> &vertices,
                  * @param serial_number - serial number of mesh element in mesh file
                  */
 void write_elements(std::ostream &out,
-                    const std::vector<MeshElement_ptr> &elems,
-                    unsigned int &serial_number);
+                    const std::vector<MeshElement*> &elems,
+                    int &serial_number);
 
                 /**
                  * Change the order of vertices in such a way,
@@ -1210,7 +1206,7 @@ void write_elements(std::ostream &out,
                  */
   void change_vertices_order(int dimension,
                              const std::vector<Point> &all_mesh_vertices,
-                             std::vector<unsigned int> &vertices);
+                             std::vector<int> &vertices);
 
 
 } // namespace tethex

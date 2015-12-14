@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
 
 
-# --- some definitions ---
+# --- build type ---
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type of the project (Debug, Release)")
 set(DEBUG OFF CACHE BOOL "Build the library with debug features! Don't confuse with compiler debug options!")
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   set(DEBUG ON CACHE BOOL "Build the library with debug features! Don't confuse with compiler debug options!" FORCE)
+else()
+  set(DEBUG OFF CACHE BOOL "Build the library with debug features! Don't confuse with compiler debug options!" FORCE)
 endif()
 
 
@@ -26,24 +28,6 @@ option(DELETE_SIMPLICES "Delete simplices after converting them into bricks (to 
 if(TESTING AND NOT DELETE_SIMPLICES)
   message("If TESTING=ON we need to remove simplices. Otherwise testing procedures will fail. Therefore DELETE_SIMPLICES=ON")
   set(DELETE_SIMPLICES ON CACHE BOOL "" FORCE)
-endif()
-
-
-# --- C++11 ---
-if(CMAKE_COMPILER_IS_GNUCXX)
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-  if(GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7)
-    message(STATUS "C++11 is activated")
-    add_definitions("-std=gnu++11")
-  elseif(GCC_VERSION VERSION_GREATER 4.3 OR GCC_VERSION VERSION_EQUAL 4.3)
-    message(STATUS "C++0x is activated")
-    add_definitions("-std=gnu++0x")
-  else()
-    message(FATAL_ERROR "C++11 or C++0x needed. Therefore a gcc compiler with a version higher than (or equal to) 4.3 is needed.")
-  endif()
-else()
-  message(STATUS "C++0x is activated")
-  add_definitions("-std=c++0x")
 endif()
 
 
@@ -67,14 +51,25 @@ set(HDR_LIST tethex.h testing.h)
 # --- Google Test ---
 if(TESTING)
   message("ATTENTION! This is a version with testing features!")
-  set(GTEST_DIR /home/artemiev/projects/gtest-1.6.0 CACHE PATH "Path to Google Test top level directory")
-  find_library(GTEST_LIB gtest ${GTEST_DIR}/lib/.libs)
+  set(GTEST_DIR /u/artemyev/software/gtest-1.7.0 CACHE PATH "Path to Google Test top level directory")
+  find_library(GTEST_LIB gtest PATHS ${GTEST_DIR} PATH_SUFFIXES "lib" "build")
   if(GTEST_LIB)
     message("GTest library is ${GTEST_LIB}")
   else()
     message(FATAL_ERROR "GTest was not found!")
   endif()
   include_directories(${GTEST_DIR}/include)
+endif()
+
+
+# --- extra compiler flags ---
+if(NOT TESTING) # these strict compiling options don't work with GTest library
+  message(STATUS "C++ compiler ID = ${CMAKE_CXX_COMPILER_ID}")
+  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    add_definitions("-Wall -Wextra -Wshadow -Weffc++ -ansi -pedantic -Werror")
+  else()
+    add_definitions("-Wall -pedantic -Werror")
+  endif()
 endif()
 
 
@@ -89,7 +84,6 @@ endif()
 # --- packaging of the library ---
 set(PACKAGE_FILE_NAME
     "${PROJECT_NAME}-${TETHEX_VERSION_MAJOR}.${TETHEX_VERSION_MINOR}.${TETHEX_VERSION_PATCH}")
-
 add_custom_target(dist
                   COMMAND git archive --prefix=${PACKAGE_FILE_NAME}/ -o ${PROJECT_BINARY_DIR}/${PACKAGE_FILE_NAME}.tar.gz HEAD
                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})

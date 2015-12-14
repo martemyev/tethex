@@ -1,9 +1,11 @@
 #ifndef TETHEX_TESTING_H
 #define TETHEX_TESTING_H
 
+#include "config.h"
+
+#if defined(TESTING)
 #include "gtest/gtest.h"
 #include "tethex.h"
-#include "config.h"
 #include <fstream>
 
 using namespace tethex;
@@ -935,5 +937,6 @@ void mesh_3d_2(std::string &input_file, std::string &output_file)
   out.close();
 }
 
+#endif // TESTING
 
 #endif // TETHEX_TESTING_H
