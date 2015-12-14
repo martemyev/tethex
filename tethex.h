@@ -23,49 +23,21 @@
 #include <iostream>
 #include <memory>
 
-// the idea of such definitions was seen in deal.II sources.
-// thanks to its authors for that
-#define TETHEX_NAMESPACE_OPEN namespace tethex {
-#define TETHEX_NAMESPACE_CLOSE }
-
-TETHEX_NAMESPACE_OPEN
+namespace tethex {
 
 //-------------------------------------------------------
 //
 // d2s - convert data to string
 //
 //-------------------------------------------------------
-                /**
-                 * Convert float number to string
-                 * @param x - the number in double format
-                 * @param scientific - use scientific format (e.g. 1e-10), or not
-                 * @param precision - if scientific format is used, we can change the precision
-                 * @return data in string format
-                 */
-std::string d2s(double x, bool scientific = false, int precision = 6);
-
-                /**
-                 * Convert integer data to string
-                 * @param x - the integer number
-                 * @return data in string format
-                 */
-std::string d2s(int x);
-
-                /**
-                 * Convert unsigned integer data to string
-                 * @param x - unsigned integer number
-                 * @return data in string format
-                 */
-std::string d2s(unsigned int x);
-
-                /**
-                 * Convert size_t data to string
-                 * @param x - size_t number
-                 * @return data in string format
-                 */
-#if defined(HAVE_64BIT_SIZE_T)
-std::string d2s(size_t x);
-#endif
+template <typename T>
+inline std::string d2s(T data)
+{
+  std::ostringstream o;
+  if (!(o << data))
+    throw std::runtime_error("Bad conversion of data to string!");
+  return o.str();
+}
 
 
 
@@ -1241,6 +1213,6 @@ void write_elements(std::ostream &out,
                              std::vector<unsigned int> &vertices);
 
 
-TETHEX_NAMESPACE_CLOSE
+} // namespace tethex
 
 #endif // TETHEX_TETHEX_H

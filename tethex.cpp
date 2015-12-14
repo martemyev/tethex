@@ -18,54 +18,7 @@
 #include <fstream>
 #include <cmath>
 
-TETHEX_NAMESPACE_OPEN
-
-//-------------------------------------------------------
-//
-// d2s - convert data to string
-//
-//-------------------------------------------------------
-inline std::string d2s(double x, bool scientific, int precision)
-{
-  std::ostringstream o;
-  if (scientific)
-  {
-    o.setf(std::ios::scientific);
-    o.precision(precision);
-  }
-  if (!(o << x))
-    throw std::runtime_error("Bad conversion from double to string!");
-  return o.str();
-}
-
-inline std::string d2s(int x)
-{
-  std::ostringstream o;
-  if (!(o << x))
-    throw std::runtime_error("Bad conversion from int to string!");
-  return o.str();
-}
-
-inline std::string d2s(unsigned int x)
-{
-  std::ostringstream o;
-  if (!(o << x))
-    throw std::runtime_error("Bad conversion from unsigned int to string!");
-  return o.str();
-}
-
-#if defined(HAVE_64BIT_SIZE_T)
-inline std::string d2s(size_t x)
-{
-  std::ostringstream o;
-  if (!(o << x))
-    throw std::runtime_error("Bad conversion from size_t to string!");
-  return o.str();
-}
-#endif
-
-
-
+namespace tethex {
 
 //-------------------------------------------------------
 //
@@ -1967,4 +1920,5 @@ double cell_measure_3D(const std::vector<Point> &vertices,
 }
 
 
-TETHEX_NAMESPACE_CLOSE
+} // namespace tethex
+
