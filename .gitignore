@@ -1,7 +1,0 @@
-*.user
-build
-doc
-dont_remove
-CTestConfig.cmake
-
-
