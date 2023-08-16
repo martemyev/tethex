@@ -1940,10 +1940,6 @@ namespace tethex
           all_mesh_vertices[vertices[2]] - all_mesh_vertices[vertices[1]];
         Point quadrangle_normal = edge1.cross(edge2).normalize();
 
-        // Print out the normal vectors.
-        std::cout << parent_cell_normal << "," << quadrangle_normal
-                  << std::endl;
-
         if (parent_cell_normal * quadrangle_normal < 0)
           {
             // reorder vertices - swap first and third vertices
